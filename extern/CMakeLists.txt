@@ -9,3 +9,12 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(tatami)
+
+FetchContent_Declare(
+  eminem
+  GIT_REPOSITORY https://github.com/tatami-inc/eminem
+  GIT_TAG fc6ee36615e1d5f4a597d6ff5622960a10bc9ed7
+)
+
+FetchContent_MakeAvailable(eminem)
+
