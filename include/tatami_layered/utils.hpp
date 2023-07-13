@@ -49,11 +49,6 @@ struct Holder {
     }
 };
 
-template<typename ColIndex_>
-constexpr size_t get_chunk_size() {
-    return static_cast<size_t>(std::numeric_limits<ColIndex_>::max()) + 1;
-}
-
 template<typename IndexIn_, typename ColIndex_> 
 void allocate_rows(
     const std::vector<std::vector<Category> >& max_per_chunk,
@@ -68,7 +63,6 @@ void allocate_rows(
     std::vector<std::vector<IndexIn_> >& assigned_position)
 {
     size_t num_chunks = max_per_chunk.size();
-    constexpr size_t chunk_size = get_chunk_size<ColIndex_>();
 
     for (size_t chunk = 0; chunk < num_chunks; ++chunk) {
         IndexIn_ counter8 = 0, counter16 = 0, counter32 = 0;
@@ -176,11 +170,11 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > consolidate_matrices(
     std::vector<Holder<uint16_t, IndexIn_, ColIndex_> > store16,
     std::vector<Holder<uint32_t, IndexIn_, ColIndex_> > store32,
     IndexIn_ NR,
+    IndexIn_ chunk_size,
     size_t leftovers)
 {
     std::vector<std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > > col_combined;
     size_t num_chunks = identities8.size();
-    constexpr size_t chunk_size = get_chunk_size<ColIndex_>();
     col_combined.reserve(num_chunks);
 
     for (size_t c = 0; c < num_chunks; ++c) {
