@@ -74,7 +74,38 @@ $(function() {
   <div class="headertitle"><div class="title">tatami helpers for creating layered matrices </div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p ><a class="anchor" id="md__github_workspace_README"></a> Layered matrices are a space optimization of sparse matrices containing small positive counts, where we store rows in different "layers" depending on whether their maximum count is large enough to fit into an unsigned 8-bit, 16-bit or 32-bit integer. This reduces the memory usage compared to naively storing counts for all rows in the largest integer size across the entire matrix. It is intended to be used with gene expression data where different genes (rows) can vary widely in their expression. </p>
+<div class="textblock"><p ><a class="anchor" id="md__github_workspace_README"></a> <img src="https://github.com/tatami-inc/tatami_layered/actions/workflows/run-tests.yaml/badge.svg" alt="Unit tests" style="pointer-events: none;" class="inline"/> <img src="https://github.com/tatami-inc/tatami_layered/actions/workflows/doxygenate.yaml/badge.svg" alt="Documentation" style="pointer-events: none;" class="inline"/> <a href="https://codecov.io/gh/tatami-inc/tatami_layered"><img src="https://codecov.io/gh/tatami-inc/tatami_layered/branch/master/graph/badge.svg" alt="Codecov" style="pointer-events: none;" class="inline"/></a></p>
+<h1>Overview</h1>
+<p >Layered matrices are a space optimization of sparse matrices containing small positive counts, where we store rows in different "layers" depending on whether their maximum count is large enough to fit into an unsigned 8-bit, 16-bit or 32-bit integer. This reduces the memory usage compared to naively storing counts for all rows in the largest integer size across the entire matrix. It is intended to be used with gene expression data where different genes (rows) can vary widely in their expression.</p>
+<h1>Quick start</h1>
+<p >We can easily convert an existing <code><a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a></code> to a layered sparse matrix:</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="tatami__layered_8hpp.html">tatami_layered/tatami_layered.hpp</a>&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">auto</span> converted = <a class="code hl_function" href="namespacetatami__layered.html#a574cd730be3c760582af78fe44efe3ac">tatami_layered::convert_to_layered_sparse</a>(mat.get());</div>
+<div class="ttc" id="anamespacetatami__layered_html_a574cd730be3c760582af78fe44efe3ac"><div class="ttname"><a href="namespacetatami__layered.html#a574cd730be3c760582af78fe44efe3ac">tatami_layered::convert_to_layered_sparse</a></div><div class="ttdeci">std::shared_ptr&lt; tatami::Matrix&lt; ValueOut_, IndexOut_ &gt; &gt; convert_to_layered_sparse(const tatami::Matrix&lt; ValueIn_, IndexIn_ &gt; *mat, IndexIn_ chunk_size=65536, int num_threads=1)</div><div class="ttdef"><b>Definition:</b> convert_to_layered_sparse.hpp:355</div></div>
+<div class="ttc" id="atatami__layered_8hpp_html"><div class="ttname"><a href="tatami__layered_8hpp.html">tatami_layered.hpp</a></div><div class="ttdoc">Umbrella header for the tatami_layered library.</div></div>
+</div><!-- fragment --><p >We can also read a layered sparse matrix from a Matrix Market file:</p>
+<div class="fragment"><div class="line"><span class="keyword">auto</span> loaded = <a class="code hl_function" href="namespacetatami__layered.html#a8da9e13208dd478b9fa73d3395d6e7d9">tatami_layered::read_layered_sparse_from_matrix_market_text_file</a>(path.c_str());</div>
+<div class="ttc" id="anamespacetatami__layered_html_a8da9e13208dd478b9fa73d3395d6e7d9"><div class="ttname"><a href="namespacetatami__layered.html#a8da9e13208dd478b9fa73d3395d6e7d9">tatami_layered::read_layered_sparse_from_matrix_market_text_file</a></div><div class="ttdeci">std::shared_ptr&lt; tatami::Matrix&lt; Value_, Index_ &gt; &gt; read_layered_sparse_from_matrix_market_text_file(const char *filepath, Index_ chunk_size=65536, size_t buffer_size=65536)</div><div class="ttdef"><b>Definition:</b> read_layered_sparse_from_matrix_market.hpp:182</div></div>
+</div><!-- fragment --><p >Check out the <a href="https://tatami-inc.github.io/tatami_layered">documentation</a> for more details.</p>
+<h1>Building with CMake</h1>
+<p >If you're using CMake, you just need to add something like this to your <code>CMakeLists.txt</code>:</p>
+<div class="fragment"><div class="line">include(FetchContent)</div>
+<div class="line"> </div>
+<div class="line">FetchContent_Declare(</div>
+<div class="line">  tatami_layered</div>
+<div class="line">  GIT_REPOSITORY https://github.com/tatami-inc/tatami_layered</div>
+<div class="line">  GIT_TAG master # or any version of interest </div>
+<div class="line">)</div>
+<div class="line"> </div>
+<div class="line">FetchContent_MakeAvailable(tatami_layered)</div>
+</div><!-- fragment --><p >Then you can link to <b><a class="el" href="namespacetatami__layered.html" title="Create layered sparse matrices for tatami.">tatami_layered</a></b> to make the headers available during compilation:</p>
+<div class="fragment"><div class="line"># For executables:</div>
+<div class="line">target_link_libraries(myexe tatami_layered)</div>
+<div class="line"> </div>
+<div class="line"># For libaries</div>
+<div class="line">target_link_libraries(mylib INTERFACE tatami_layered)</div>
+</div><!-- fragment --><p >If you're not using CMake, the simple approach is to just copy the files - either directly or with Git submodules - and include their path during compilation with, e.g., GCC's <code>-I</code>. This will also require the various dependencies listed in the <a href="extern/CMakeLists.txt"><code>extern/CMakeLists.txt</code></a> file. </p>
 </div></div><!-- PageDoc -->
 </div><!-- contents -->
 <!-- start footer part -->
