@@ -346,16 +346,12 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
  * The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them.
  * We improve the chances of being able to use small types by splitting the matrix columns into contiguous chunks according to `chunk_size`.
  * This ensures that a few large values in a particular row only cause promotion to a larger type for the chunks in which they occur.
- *
- * Setting `ColumnIndex_` to the smallest type that can hold `chunk_size - 1` can be used to further reduce memory usage.
- * If `ColumnIndex_` is not able to hold `chunk_size - 1`, `chunk_size` is automatically set to the largest value that is represented by `ColumnIndex_` (plus 1).
- * For example, if `ColumnIndex_` was set to an unsigned 8-bit integer, `chunk_size` would be automatically reduced to 256.
+ * Setting `ColumnIndex_` can be used to further reduce memory usage, but this must be chosen such that its maximum value is not less than the chunk size (minus 1).
  */
 template<typename ValueOut_ = double, typename IndexOut_ = int, typename ColumnIndex_ = uint16_t, typename ValueIn_, typename IndexIn_>
 std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_to_layered_sparse(const tatami::Matrix<ValueIn_, IndexIn_>* mat, IndexIn_ chunk_size = 65536, int num_threads = 1) {
-    size_t max_index = static_cast<size_t>(std::numeric_limits<ColumnIndex_>::max()) + 1;
-    if (static_cast<size_t>(chunk_size) > max_index) {
-        chunk_size = max_index;
+    if (static_cast<size_t>(chunk_size) > static_cast<size_t>(std::numeric_limits<ColumnIndex_>::max()) + 1) {
+        throw std::runtime_error("'chunk_size' is too large for the specified column index type");
     }
 
     if (mat->prefer_rows()) {
