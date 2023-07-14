@@ -109,6 +109,37 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
         } else if (banner.field == eminem::Field::DOUBLE || banner.field == eminem::Field::REAL) {
             parser.scan_real(handler);
         }
+
+        // Checking that the column indices are sorted properly.
+        auto sorter = [&](auto& store) -> void {
+            std::vector<std::pair<typename decltype(store[0].index)::value_type, typename decltype(store[0].value)::value_type> > buffer;
+            buffer.reserve(chunk_size);
+
+            for (auto& st : store) {
+                size_t current_NR = st.ptr.size() - 1;
+                for (size_t r = 0; r < current_NR; ++r) {
+                    size_t start = st.ptr[r], end = st.ptr[r + 1];
+
+                    if (!std::is_sorted(st.index.begin() + start, st.index.begin() + end)) {
+                        buffer.clear();
+                        for (size_t i = start; i < end; ++i) {
+                            buffer.emplace_back(st.index[i], st.value[i]);
+                        }
+
+                        std::sort(buffer.begin(), buffer.end());
+                        auto bIt = buffer.begin();
+                        for (size_t i = start; i < end; ++i, ++bIt) {
+                            st.index[i] = bIt->first;
+                            st.value[i] = bIt->second;
+                        }
+                    }
+                }
+            }
+        };
+
+        sorter(store8);
+        sorter(store16);
+        sorter(store32);
     }
 
     return consolidate_matrices<Value_, Index_>(
@@ -199,9 +230,9 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
     if (compression != 0) {
 #if __has_include("zlib.h")
         if (compression == -1) {
-            return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::SomeBufferReader(contents, length, buffer_size); });
+            return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::SomeBufferReader(contents, length, buffer_size); }, chunk_size);
         } else if (compression == 1) {
-            return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::ZlibBufferReader(contents, length, 3, buffer_size); });
+            return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::ZlibBufferReader(contents, length, 3, buffer_size); }, chunk_size);
         }
 #else
         if (compression != -1) {

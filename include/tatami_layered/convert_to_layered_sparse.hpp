@@ -158,7 +158,6 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
     auto NR = mat->nrow(), NC = mat->ncol();
     IndexIn_ leftovers = NC % chunk_size;
     size_t nchunks = std::max(static_cast<size_t>(1), static_cast<size_t>(NC) / chunk_size + (leftovers != 0));
-    std::cout << nchunks << std::endl;
 
     std::vector<Holder<uint8_t, IndexOut_, ColIndex_> > store8(nchunks);
     std::vector<Holder<uint16_t, IndexOut_, ColIndex_> > store16(nchunks);
