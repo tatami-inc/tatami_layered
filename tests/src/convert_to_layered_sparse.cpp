@@ -217,8 +217,9 @@ TEST_P(ConvertToLayeredSparseHardTest, Chunked) {
         typedef tatami::CompressedSparseColumnMatrix<double, int, decltype(vals), decltype(rows), decltype(indptrs)> SparseMat; 
         auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, std::move(vals), std::move(rows), std::move(indptrs))); 
 
-        // Using very small integers to encourage chunking.
-        auto out = tatami_layered::convert_to_layered_sparse<double, int, uint8_t>(ref.get(), 256, nthreads);
+        // Using very small integers to encourage chunking. Chunk size
+        // is automatically reduced to the max integer size.
+        auto out = tatami_layered::convert_to_layered_sparse<double, int, uint8_t>(ref.get(), 300, nthreads);
 
         auto rwrk = ref->dense_row();
         auto owrk = out->dense_row();
@@ -238,7 +239,7 @@ TEST_P(ConvertToLayeredSparseHardTest, Chunked) {
         typedef tatami::CompressedSparseRowMatrix<double, int, decltype(vals), decltype(cols), decltype(indptrs)> SparseMat; 
         auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, std::move(vals), std::move(cols), std::move(indptrs))); 
 
-        auto out = tatami_layered::convert_to_layered_sparse<double, int, uint8_t>(ref.get(), 256, nthreads);
+        auto out = tatami_layered::convert_to_layered_sparse<double, int, uint8_t>(ref.get(), 300, nthreads);
 
         auto rwrk = ref->dense_row();
         auto owrk = out->dense_row();
