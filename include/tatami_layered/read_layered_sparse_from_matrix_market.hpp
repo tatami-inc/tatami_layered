@@ -3,15 +3,18 @@
 
 #include "byteme/byteme.hpp"
 #include "eminem/eminem.hpp"
+
 #include <vector>
 #include <algorithm>
+
+#include "utils.hpp"
 
 namespace tatami_layered {
 
 /**
  * @cond
  */
-template<typename Value_, typename Index_, typename ColumnIndex_>
+template<typename Value_, typename Index_, typename ColumnIndex_, class Creator_>
 std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market(Creator_ create, Index_ chunk_size) {
     size_t NR, NC, nchunks, leftovers;
 
@@ -25,7 +28,8 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
 
     // First pass, scanning for the max and number.
     {
-        auto parser = create();
+        auto reader = create();
+        eminem::Parser parser(&reader);
 
         parser.scan_preamble();
         NR = parser.get_nrows();
@@ -43,7 +47,7 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
         assigned_category.resize(nchunks);
 
         std::vector<std::vector<Category> > max_per_chunk(nchunks);
-        std::vector<std::vector<IndexIn_> > num_per_chunk(nchunks);
+        std::vector<std::vector<Index_> > num_per_chunk(nchunks);
         for (auto& x : max_per_chunk) { x.resize(NR); }
         for (auto& x : num_per_chunk) { x.resize(NR); }
 
@@ -55,9 +59,9 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
         };
 
         const auto& banner = parser.get_banner();
-        if (banner.field == eminem::Format::INTEGER) {
+        if (banner.field == eminem::Field::INTEGER) {
             parser.scan_integer(handler);
-        } else if (banner.field == eminem::Format::DOUBLE || banner.field == eminem::Format::REAL) {
+        } else if (banner.field == eminem::Field::DOUBLE || banner.field == eminem::Field::REAL) {
             parser.scan_real(handler);
         } else {
             throw std::runtime_error("expected a numeric field in the Matrix Market file");
@@ -79,27 +83,30 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
    
     // Now allocating.
     {
-        auto parser2 = create();
-
         std::vector<std::vector<size_t> > output_positions(nchunks);
         for (size_t chunk = 0; chunk < nchunks; ++chunk) {
-            output_positions[chunk].resize(length);
-            for (Index_ r = 0; r < length; ++r) {
-                output_positions[chunk][r] = get_sparse_ptr(store8, store16, store32, assigned_category, assigned_position, chunk, r);
+            output_positions[chunk].resize(NR);
+            for (size_t r = 0; r < NR; ++r) {
+                output_positions[chunk][r] = get_sparse_ptr(store8, store16, store32, assigned_category, assigned_position, chunk, static_cast<Index_>(r));
             }
         }
 
         auto handler = [&](size_t r, size_t c, int val) -> void {
             --c;
             auto chunk = c / chunk_size;
-            auto offset = c % chunk_size;
+            Index_ offset = c % chunk_size;
             --r;
-            fill_sparse_value(store8, store16, store32, assigned_category[chunk][r], chunk, col, range.value[i], output_positions[chunk][r]++);
+            fill_sparse_value(store8, store16, store32, assigned_category[chunk][r], chunk, offset, val, output_positions[chunk][r]++);
         };
 
-        if (banner.field == eminem::Format::INTEGER) {
+        auto reader = create();
+        eminem::Parser parser(&reader);
+        parser.scan_preamble();
+
+        const auto& banner = parser.get_banner();
+        if (banner.field == eminem::Field::INTEGER) {
             parser.scan_integer(handler);
-        } else if (banner.field == eminem::Format::DOUBLE || banner.field == eminem::Format::REAL) {
+        } else if (banner.field == eminem::Field::DOUBLE || banner.field == eminem::Field::REAL) {
             parser.scan_real(handler);
         }
     }
@@ -111,9 +118,9 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
         std::move(store8), 
         std::move(store16), 
         std::move(store32),
-        NR,
+        static_cast<Index_>(NR),
         chunk_size,
-        leftovers
+        static_cast<Index_>(leftovers)
     );
 }
 /**
@@ -141,7 +148,7 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
 template<typename Value_ = double, typename Index_ = int, typename ColumnIndex_ = uint16_t>
 std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_file(
     const char * filepath, 
-    size_t chunk_size = 65536, 
+    Index_ chunk_size = 65536, 
     int compression = -1, 
     size_t buffer_size = 65536)
 {
@@ -185,7 +192,7 @@ template<typename Value_ = double, typename Index_ = int, typename ColumnIndex_ 
 std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_buffer(
     const unsigned char* contents, 
     size_t length, 
-    size_t chunk_size = 65536, 
+    Index_ chunk_size = 65536, 
     int compression = -1, 
     size_t buffer_size = 65536) 
 {
@@ -203,6 +210,8 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
 #endif
     }
     return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::RawBufferReader(contents, length); }, chunk_size);
+
+}
 
 }
 
