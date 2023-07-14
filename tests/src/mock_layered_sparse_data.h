@@ -26,28 +26,41 @@ void mock_layered_sparse_data(size_t NR, size_t NC, std::vector<size_t>& rows, s
         return rng() % upper;
     };
 
+    auto secondary_dim = (ByRow ? NC : NR);
+    std::vector<unsigned char> present(secondary_dim);
+    auto choose = [&](auto& primary_store, auto& secondary_store, int primary_index) -> void {
+        // This averages out to around about two values per row. This gives
+        // us something interesting w.r.t. multiple values at different limits
+        // (e.g., about 1/9th of the rows will have both values at the lowest limit).
+        size_t number = (rng() % 3) + 1; 
+
+        size_t original = secondary_store.size();
+        for (size_t i = 0; i < number; ++i) {
+            size_t candidate;
+            do {
+                candidate = rng() % secondary_dim;
+            } while (present[candidate]);
+            present[candidate] = 1;
+
+            secondary_store.push_back(candidate);
+            primary_store.push_back(primary_index);
+            vals.push_back(rand());
+        }
+
+        std::sort(secondary_store.begin() + original, secondary_store.end());
+        for (size_t i = 0; i < number; ++i) {
+            present[secondary_store[original + i]] = 0;
+        } 
+        return;
+    };
+
     if constexpr(!ByRow) {
         for (size_t c = 0; c < NC; ++c) {
-            for (size_t r = 0; r < NR; ++r) {
-                // i.e., around about two values per row. This gives
-                // us something interesting w.r.t. multiple values at different limits
-                // (e.g., about 1/9th of the rows will have both values at the lowest limit).
-                if (rng() % NC < 2) { 
-                    rows.push_back(r);
-                    cols.push_back(c);
-                    vals.push_back(rand());
-                }
-            }
+            choose(cols, rows, c);
         }
     } else {
         for (size_t r = 0; r < NR; ++r) {
-            for (size_t c = 0; c < NC; ++c) {
-                if (rng() % NC < 2) { 
-                    rows.push_back(r);
-                    cols.push_back(c);
-                    vals.push_back(rand());
-                }
-            }
+            choose(rows, cols, r);
         }
     }
 
