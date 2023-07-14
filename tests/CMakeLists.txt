@@ -14,6 +14,7 @@ enable_testing()
 add_executable(
     libtest 
     src/convert_to_layered_sparse.cpp
+    src/read_layered_sparse_from_matrix_market.cpp
 )
 
 target_link_libraries(
@@ -21,6 +22,15 @@ target_link_libraries(
     gtest_main
     tatami_layered
 )
+
+find_package(ZLIB)
+target_link_libraries(libtest ZLIB::ZLIB)
+
+include(CheckIncludeFiles)
+check_include_files(filesystem HAVE_CXX_FS)
+if (NOT HAVE_CXX_FS)
+    target_link_libraries(libtest stdc++fs)
+endif()
 
 # Checking whether to add OpenMP support. This is turned off
 # by default to make it easier to debug test failures.
