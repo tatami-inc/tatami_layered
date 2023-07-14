@@ -9,7 +9,7 @@
 #include <fstream>
 #include <sstream>
 
-class ReadLayeredSparseFromMatrixMarketTest : public ::testing::TestWithParam<bool> {
+class ReadLayeredSparseFromMatrixMarketTest : public ::testing::TestWithParam<std::tuple<bool, int> > {
 protected:
     size_t NR = 2000, NC = 1000;
 
@@ -39,7 +39,9 @@ protected:
 };
 
 TEST_P(ReadLayeredSparseFromMatrixMarketTest, File) {
-    auto scrambled = GetParam();
+    auto param = GetParam();
+    auto scrambled = std::get<0>(param);
+    auto compressed = std::get<1>(param);
 
     std::vector<size_t> rows, cols;
     std::vector<int> vals;
@@ -50,12 +52,28 @@ TEST_P(ReadLayeredSparseFromMatrixMarketTest, File) {
     auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, vals, rows, indptrs)); 
 
     auto path = byteme::temp_file_path("tatami-tests-ext-MatrixMarket", ".mtx");
-    {
+    if (!compressed) {
         std::ofstream file_out(path);
         write_matrix_market(file_out, NR, NC, vals, rows, cols, scrambled);
+    } else {
+        std::stringstream sstream;
+        write_matrix_market(sstream, NR, NC, vals, rows, cols, scrambled);
+        auto contents = sstream.str();
+
+        path += ".gz";
+        gzFile ohandle = gzopen(path.c_str(), "w");
+        gzwrite(ohandle, contents.data(), contents.size());
+        gzclose(ohandle);
     }
 
-    auto out = tatami_layered::read_layered_sparse_from_matrix_market_file(path.c_str());
+    std::shared_ptr<tatami::NumericMatrix> out;
+    if (compressed == 0) {
+        out = tatami_layered::read_layered_sparse_from_matrix_market_text_file(path.c_str());
+    } else if (compressed == 1) {
+        out = tatami_layered::read_layered_sparse_from_matrix_market_gzip_file(path.c_str());
+    } else if (compressed == 2) {
+        out = tatami_layered::read_layered_sparse_from_matrix_market_some_file(path.c_str());
+    }
 
     auto owrk = out->dense_row();
     auto rwrk = ref->dense_row();
@@ -66,7 +84,9 @@ TEST_P(ReadLayeredSparseFromMatrixMarketTest, File) {
 }
 
 TEST_P(ReadLayeredSparseFromMatrixMarketTest, Buffer) {
-    auto scrambled = GetParam();
+    auto param = GetParam();
+    auto scrambled = std::get<0>(param);
+    auto compressed = std::get<1>(param);
 
     std::vector<size_t> rows, cols;
     std::vector<int> vals;
@@ -80,7 +100,29 @@ TEST_P(ReadLayeredSparseFromMatrixMarketTest, Buffer) {
     write_matrix_market(buf_out, NR, NC, vals, rows, cols, scrambled);
     auto contents = buf_out.str();
 
-    auto out = tatami_layered::read_layered_sparse_from_matrix_market_buffer(reinterpret_cast<const unsigned char*>(contents.data()), contents.size());
+    if (compressed) {
+        auto path = byteme::temp_file_path("tatami-tests-ext-MatrixMarket", ".mtx.gz");
+        gzFile ohandle = gzopen(path.c_str(), "w");
+        gzwrite(ohandle, contents.data(), contents.size());
+        gzclose(ohandle);
+
+        std::ifstream handle(path, std::ios_base::binary);
+        handle >> std::noskipws;
+        contents.clear();
+        contents.insert(contents.end(), std::istream_iterator<unsigned char>{handle}, std::istream_iterator<unsigned char>());
+    }
+
+    std::shared_ptr<tatami::NumericMatrix> out;
+    auto ptr = reinterpret_cast<const unsigned char*>(contents.data());
+    size_t n = contents.size();
+
+    if (compressed == 0) {
+        out = tatami_layered::read_layered_sparse_from_matrix_market_text_buffer(ptr, n);
+    } else if (compressed == 1) {
+        out = tatami_layered::read_layered_sparse_from_matrix_market_zlib_buffer(ptr, n);
+    } else if (compressed == 2) {
+        out = tatami_layered::read_layered_sparse_from_matrix_market_some_buffer(ptr, n);
+    }
 
     auto owrk = out->dense_row();
     auto rwrk = ref->dense_row();
@@ -93,5 +135,8 @@ TEST_P(ReadLayeredSparseFromMatrixMarketTest, Buffer) {
 INSTANTIATE_TEST_SUITE_P(
     ReadLayeredSparseFromMatrixMarket,
     ReadLayeredSparseFromMatrixMarketTest,
-    ::testing::Values(false, true)
+    ::testing::Combine(
+        ::testing::Values(false, true), // scrambled?
+        ::testing::Values(0, 1, 2)  // Gzipped?
+    )
 );

@@ -9,6 +9,11 @@
 
 #include "utils.hpp"
 
+/**
+ * @file read_layered_sparse_from_matrix_market.hpp
+ * @brief Read layered sparse matrices from Matrix Market files.
+ */
+
 namespace tatami_layered {
 
 /**
@@ -159,11 +164,8 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
  */
 
 /**
- * @param filepath Path to a (possibly Gzip-compressed) Matrix Market file.
- * The file should contain integer data in the coordinate format, stored in text without any compression.
+ * @param filepath Path to an uncompressed Matrix Market text file.
  * @param chunk_size Chunk size to use for partitioning columns.
- * @param compression Compression method for the file - no compression (0) or Gzip compression (1).
- * If set to -1, the function will automatically guess the compression based on magic numbers.
  * @param buffer_size Size of the buffer (in bytes) to use when reading from file.
  * 
  * @return A `tatami::Matrix` object containing a layered sparse matrix.
@@ -177,36 +179,80 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
  * See `convert_to_layered_sparse()` for more details.
  */
 template<typename Value_ = double, typename Index_ = int, typename ColumnIndex_ = uint16_t>
-std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_file(
-    const char * filepath, 
-    Index_ chunk_size = 65536, 
-    int compression = -1, 
-    size_t buffer_size = 65536)
-{
-    if (compression != 0) {
-#if __has_include("zlib.h")
-        if (compression == -1) {
-            return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::SomeFileReader(filepath, buffer_size); }, chunk_size);
-        } else if (compression == 1) {
-            return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::GzipFileReader(filepath, buffer_size); }, chunk_size);
-        }
-#else
-        if (compression != -1) {
-            throw std::runtime_error("layered sparse matrix reader not compiled with support for non-zero 'compression'");
-        }
-#endif
-    }
+std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_text_file(const char * filepath, Index_ chunk_size = 65536, size_t buffer_size = 65536) {
     return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::RawFileReader(filepath, buffer_size); }, chunk_size);
 }
 
+#if __has_include("zlib.h")
 
 /**
- * @param contents Array containing the contents of a (possibly Gzip-compressed) Matrix Market file.
- * The file should contain integer data in the coordinate format, stored in text without any compression.
+ * @param filepath Path to a (possibly Gzip-compressed) Matrix Market file.
+ * @param chunk_size Chunk size to use for partitioning columns.
+ * @param buffer_size Size of the buffer (in bytes) to use when reading from file.
+ * 
+ * @return A `tatami::Matrix` object containing a layered sparse matrix.
+ *
+ * @tparam Value_ Type of data value for the output `tatami::Matrix` interface.
+ * @tparam Index_ Integer type for the row/column indices of the output.
+ * @tparam ColumnIndex_ Integer type for the stored column indices.
+ *
+ * This function loads a layered sparse integer matrix from a Matrix Market file.
+ * The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them.
+ * See `convert_to_layered_sparse()` for more details.
+ */
+template<typename Value_ = double, typename Index_ = int, typename ColumnIndex_ = uint16_t>
+std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_some_file(const char * filepath, Index_ chunk_size = 65536, size_t buffer_size = 65536) {
+    return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::SomeFileReader(filepath, buffer_size); }, chunk_size);
+}
+
+/**
+ * @param filepath Path to a Gzip-compressed Matrix Market file.
+ * @param chunk_size Chunk size to use for partitioning columns.
+ * @param buffer_size Size of the buffer (in bytes) to use when reading from file.
+ * 
+ * @return A `tatami::Matrix` object containing a layered sparse matrix.
+ *
+ * @tparam Value_ Type of data value for the output `tatami::Matrix` interface.
+ * @tparam Index_ Integer type for the row/column indices of the output.
+ * @tparam ColumnIndex_ Integer type for the stored column indices.
+ *
+ * This function loads a layered sparse integer matrix from a Matrix Market file.
+ * The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them.
+ * See `convert_to_layered_sparse()` for more details.
+ */
+template<typename Value_ = double, typename Index_ = int, typename ColumnIndex_ = uint16_t>
+std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_gzip_file(const char * filepath, Index_ chunk_size = 65536, size_t buffer_size = 65536) {
+    return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::GzipFileReader(filepath, buffer_size); }, chunk_size);
+}
+
+#endif
+
+/**
+ * @param contents Array containing the contents of an uncompressed Matrix Market text file.
  * @param length Length of the array.
  * @param chunk_size Chunk size to use for partitioning columns.
- * @param compression Compression method for the file contents - no compression (0) or Gzip/Zlib compression (1).
- * If set to -1, the function will automatically guess the compression based on magic numbers.
+ * 
+ * @return A `tatami::Matrix` object containing a layered sparse matrix.
+ *
+ * @tparam Value_ Type of data value for the output `tatami::Matrix` interface.
+ * @tparam Index_ Integer type for the row/column indices of the output.
+ * @tparam ColumnIndex_ Integer type for the stored column indices.
+ *
+ * This function loads a layered sparse integer matrix from a buffer with the contents of a Matrix Market file.
+ * The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them.
+ * See `convert_to_layered_sparse()` for more details.
+ */
+template<typename Value_ = double, typename Index_ = int, typename ColumnIndex_ = uint16_t>
+std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_text_buffer(const unsigned char* contents, size_t length, Index_ chunk_size = 65536) {
+    return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::RawBufferReader(contents, length); }, chunk_size);
+}
+
+#if __has_include("zlib.h")
+
+/**
+ * @param contents Array containing the contents of a (possibly Gzip/Zlib-compressed) Matrix Market file.
+ * @param length Length of the array.
+ * @param chunk_size Chunk size to use for partitioning columns.
  * @param buffer_size Size of the buffer to use for decompression, in bytes.
  * 
  * @return A `tatami::Matrix` object containing a layered sparse matrix.
@@ -220,29 +266,32 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
  * See `convert_to_layered_sparse()` for more details.
  */
 template<typename Value_ = double, typename Index_ = int, typename ColumnIndex_ = uint16_t>
-std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_buffer(
-    const unsigned char* contents, 
-    size_t length, 
-    Index_ chunk_size = 65536, 
-    int compression = -1, 
-    size_t buffer_size = 65536) 
-{
-    if (compression != 0) {
-#if __has_include("zlib.h")
-        if (compression == -1) {
-            return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::SomeBufferReader(contents, length, buffer_size); }, chunk_size);
-        } else if (compression == 1) {
-            return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::ZlibBufferReader(contents, length, 3, buffer_size); }, chunk_size);
-        }
-#else
-        if (compression != -1) {
-            throw std::runtime_error("layered sparse matrix reader not compiled with support for non-zero 'compression'");
-        }
-#endif
-    }
-    return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::RawBufferReader(contents, length); }, chunk_size);
-
+std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_some_buffer(const unsigned char* contents, size_t length, Index_ chunk_size = 65536, size_t buffer_size = 65536) {
+    return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::SomeBufferReader(contents, length, buffer_size); }, chunk_size);
 }
+
+/**
+ * @param contents Array containing the contents of a Gzip/Zlib-compressed Matrix Market file.
+ * @param length Length of the array.
+ * @param chunk_size Chunk size to use for partitioning columns.
+ * @param buffer_size Size of the buffer to use for decompression, in bytes.
+ * 
+ * @return A `tatami::Matrix` object containing a layered sparse matrix.
+ *
+ * @tparam Value_ Type of data value for the output `tatami::Matrix` interface.
+ * @tparam Index_ Integer type for the row/column indices of the output.
+ * @tparam ColumnIndex_ Integer type for the stored column indices.
+ *
+ * This function loads a layered sparse integer matrix from a buffer with the contents of a Matrix Market file.
+ * The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them.
+ * See `convert_to_layered_sparse()` for more details.
+ */
+template<typename Value_ = double, typename Index_ = int, typename ColumnIndex_ = uint16_t>
+std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_zlib_buffer(const unsigned char* contents, size_t length, Index_ chunk_size = 65536, size_t buffer_size = 65536) {
+    return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::SomeBufferReader(contents, length, buffer_size); }, chunk_size);
+}
+
+#endif
 
 }
 
