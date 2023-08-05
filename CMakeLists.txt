@@ -8,7 +8,7 @@ project(tatami_layered
 set(CMAKE_CXX_STANDARD 17)
 
 add_library(tatami_layered INTERFACE)
-add_library(tatami::tatami_layered INTERFACE tatami_layered)
+add_library(tatami::tatami_layered ALIAS tatami_layered)
 
 option(TATAMI_LAYERED_FETCH_EXTERN "Automatically fetch tatami_layered's external dependencies." ON)
 if(TATAMI_LAYERED_FETCH_EXTERN)
@@ -41,7 +41,6 @@ if(EMINEM_TESTS)
     if(BUILD_TESTING)
         add_subdirectory(tests)
     endif()
-    add_subdirectory(perf)
 endif()
 
 # Installing for find_package.
