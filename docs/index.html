@@ -88,7 +88,8 @@ $(function() {
 <div class="fragment"><div class="line"><span class="keyword">auto</span> loaded = <a class="code hl_function" href="namespacetatami__layered.html#a8da9e13208dd478b9fa73d3395d6e7d9">tatami_layered::read_layered_sparse_from_matrix_market_text_file</a>(path.c_str());</div>
 <div class="ttc" id="anamespacetatami__layered_html_a8da9e13208dd478b9fa73d3395d6e7d9"><div class="ttname"><a href="namespacetatami__layered.html#a8da9e13208dd478b9fa73d3395d6e7d9">tatami_layered::read_layered_sparse_from_matrix_market_text_file</a></div><div class="ttdeci">std::shared_ptr&lt; tatami::Matrix&lt; Value_, Index_ &gt; &gt; read_layered_sparse_from_matrix_market_text_file(const char *filepath, Index_ chunk_size=65536, size_t buffer_size=65536)</div><div class="ttdef"><b>Definition:</b> read_layered_sparse_from_matrix_market.hpp:182</div></div>
 </div><!-- fragment --><p >Check out the <a href="https://tatami-inc.github.io/tatami_layered">documentation</a> for more details.</p>
-<h1>Building with CMake</h1>
+<h1>Building projects</h1>
+<h2>CMake with <code>FetchContent</code></h2>
 <p >If you're using CMake, you just need to add something like this to your <code>CMakeLists.txt</code>:</p>
 <div class="fragment"><div class="line">include(FetchContent)</div>
 <div class="line"> </div>
@@ -105,7 +106,16 @@ $(function() {
 <div class="line"> </div>
 <div class="line"># For libaries</div>
 <div class="line">target_link_libraries(mylib INTERFACE tatami_layered)</div>
-</div><!-- fragment --><p >If you're not using CMake, the simple approach is to just copy the files - either directly or with Git submodules - and include their path during compilation with, e.g., GCC's <code>-I</code>. This will also require the various dependencies listed in the <a href="extern/CMakeLists.txt"><code>extern/CMakeLists.txt</code></a> file. </p>
+</div><!-- fragment --><h2>CMake using <code>find_package()</code></h2>
+<p >You can install the library by cloning a suitable version of this repository and running the following commands:</p>
+<div class="fragment"><div class="line">mkdir build &amp;&amp; cd build</div>
+<div class="line">cmake .. -DTATAMI_LAYERED_TESTS=OFF</div>
+<div class="line">cmake --build . --target install</div>
+</div><!-- fragment --><p >Then you can use <code>find_package()</code> as usual:</p>
+<div class="fragment"><div class="line">find_package(tatami_tatami_layered CONFIG REQUIRED)</div>
+<div class="line">target_link_libraries(mylib INTERFACE tatami::tatami_layered)</div>
+</div><!-- fragment --><h2>Manual</h2>
+<p >If you're not using CMake, the simple approach is to just copy the files - either directly or with Git submodules - and include their path during compilation with, e.g., GCC's <code>-I</code>. This will also require the various dependencies listed in the <a href="extern/CMakeLists.txt"><code>extern/CMakeLists.txt</code></a> file. </p>
 </div></div><!-- PageDoc -->
 </div><!-- contents -->
 <!-- start footer part -->
