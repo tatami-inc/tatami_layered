@@ -10,42 +10,46 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-# Main test executable.
-add_executable(
-    libtest 
-    src/convert_to_layered_sparse.cpp
-    src/read_layered_sparse_from_matrix_market.cpp
-)
-
-target_link_libraries(
-    libtest
-    gtest_main
-    tatami_layered
-)
-
 find_package(ZLIB)
-target_link_libraries(libtest ZLIB::ZLIB)
+
+include(GoogleTest)
 
 include(CheckIncludeFiles)
 check_include_files(filesystem HAVE_CXX_FS)
-if (NOT HAVE_CXX_FS)
-    target_link_libraries(libtest stdc++fs)
-endif()
-
-# Checking whether to add OpenMP support. This is turned off
-# by default to make it easier to debug test failures.
-set(USE_OPENMP OFF CACHE BOOL "Compile with OpenMP support")
-if (USE_OPENMP)
-    find_package(OpenMP)
-    target_link_libraries(libtest OpenMP::OpenMP_CXX)
-endif()
 
 set(CODE_COVERAGE OFF CACHE BOOL "Enable coverage testing")
-if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(libtest PRIVATE -O0 -g --coverage)
-    target_link_options(libtest PRIVATE --coverage)
-endif()
 
-# Making the tests discoverable.
-include(GoogleTest)
-gtest_discover_tests(libtest)
+# Avoid duplicating the target definition depending on whether OpenMP is to be used.
+macro(create_libtest target)
+  add_executable(
+      ${target}
+      src/convert_to_layered_sparse.cpp
+      src/read_layered_sparse_from_matrix_market.cpp
+  )
+  
+  target_link_libraries(
+      ${target}
+      gtest_main
+      tatami_layered
+      ZLIB::ZLIB
+  )
+
+  if(NOT HAVE_CXX_FS)
+      target_link_libraries(${target} stdc++fs)
+  endif()
+
+  if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+      target_compile_options(${target} PRIVATE -O0 -g --coverage)
+      target_link_options(${target} PRIVATE --coverage)
+  endif()
+
+  gtest_discover_tests(${target})
+endmacro()
+
+create_libtest(libtest)
+
+find_package(OpenMP)
+if(OpenMP_FOUND)
+    create_libtest(omptest)
+    target_link_libraries(omptest OpenMP::OpenMP_CXX)
+endif()
