@@ -26,17 +26,17 @@ include(GNUInstallDirs)
 target_include_directories(tatami_layered
     INTERFACE 
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/tatami>"
+    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/tatami_tatami_layered>"
 )
 
 # Building the test-related machinery, if we are compiling this library directly.
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-    option(EMINEM_TESTS "Build tatami_layered's test suite." ON)
+    option(TATAMI_LAYERED_TESTS "Build tatami_layered's test suite." ON)
 else()
-    option(EMINEM_TESTS "Build tatami_layered's test suite." OFF)
+    option(TATAMI_LAYERED_TESTS "Build tatami_layered's test suite." OFF)
 endif()
 
-if(EMINEM_TESTS)
+if(TATAMI_LAYERED_TESTS)
     include(CTest)
     if(BUILD_TESTING)
         add_subdirectory(tests)
@@ -47,7 +47,7 @@ endif()
 include(CMakePackageConfigHelpers)
 
 install(DIRECTORY include/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tatami)
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tatami_tatami_layered)
 
 install(TARGETS tatami_layered
     EXPORT tatami_layeredTargets)
