@@ -29,7 +29,9 @@ auto loaded = tatami_layered::read_layered_sparse_from_matrix_market_text_file(p
 
 Check out the [documentation](https://tatami-inc.github.io/tatami_layered) for more details.
 
-## Building with CMake
+## Building projects
+
+### CMake with `FetchContent`
 
 If you're using CMake, you just need to add something like this to your `CMakeLists.txt`:
 
@@ -54,6 +56,25 @@ target_link_libraries(myexe tatami_layered)
 # For libaries
 target_link_libraries(mylib INTERFACE tatami_layered)
 ```
+
+### CMake using `find_package()`
+
+You can install the library by cloning a suitable version of this repository and running the following commands:
+
+```sh
+mkdir build && cd build
+cmake .. -DTATAMI_LAYERED_TESTS=OFF
+cmake --build . --target install
+```
+
+Then you can use `find_package()` as usual:
+
+```cmake
+find_package(tatami_tatami_layered CONFIG REQUIRED)
+target_link_libraries(mylib INTERFACE tatami::tatami_layered)
+```
+
+### Manual
 
 If you're not using CMake, the simple approach is to just copy the files - either directly or with Git submodules - and include their path during compilation with, e.g., GCC's `-I`.
 This will also require the various dependencies listed in the [`extern/CMakeLists.txt`](extern/CMakeLists.txt) file.
