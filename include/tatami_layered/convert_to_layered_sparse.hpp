@@ -45,7 +45,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
             tatami::parallelize([&](size_t, IndexIn_ start, IndexIn_ length) -> void {
                 tatami::Options opt;
                 opt.sparse_ordered_index = false;
-                auto ext = tatami::consecutive_extractor<true, true>(mat, start, length, opt);
+                auto ext = tatami::consecutive_extractor<true>(mat, true, start, length, opt);
                 std::vector<ValueIn_> dbuffer(NC);
                 std::vector<IndexIn_> ibuffer(NC);
 
@@ -64,7 +64,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
 
         } else {
             tatami::parallelize([&](size_t, IndexIn_ start, IndexIn_ length) -> void {
-                auto ext = tatami::consecutive_extractor<true, false>(mat, start, length);
+                auto ext = tatami::consecutive_extractor<false>(mat, true, start, length);
                 std::vector<ValueIn_> dbuffer(NC);
 
                 for (IndexIn_ r = start, end = start + length; r < end; ++r) {
@@ -103,7 +103,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
 
             if (mat->sparse()) {
                 std::vector<IndexIn_> ibuffer(NC);
-                auto ext = tatami::consecutive_extractor<true, true>(mat, start, length);
+                auto ext = tatami::consecutive_extractor<true>(mat, true, start, length);
                 for (IndexIn_ r = start, end = start + length; r < end; ++r) {
                     for (size_t chunk = 0; chunk < nchunks; ++chunk) {
                         output_positions[chunk] = get_sparse_ptr(store8, store16, store32, assigned_category, assigned_position, chunk, r);
@@ -120,7 +120,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
                 }
 
             } else {
-                auto ext = tatami::consecutive_extractor<true, false>(mat, start, length);
+                auto ext = tatami::consecutive_extractor<false>(mat, true, start, length);
                 for (IndexIn_ r = start, end = start + length; r < end; ++r) {
                     for (size_t chunk = 0; chunk < nchunks; ++chunk) {
                         output_positions[chunk] = get_sparse_ptr(store8, store16, store32, assigned_category, assigned_position, chunk, r);
@@ -185,7 +185,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
             tatami::parallelize([&](size_t t, IndexIn_ start, IndexIn_ length) -> void {
                 tatami::Options opt;
                 opt.sparse_ordered_index = false;
-                auto ext = tatami::consecutive_extractor<false, true>(mat, start, length, opt);
+                auto ext = tatami::consecutive_extractor<true>(mat, false, start, length, opt);
                 std::vector<ValueIn_> dbuffer(NR);
                 std::vector<IndexIn_> ibuffer(NR);
                 auto& max_per_chunk = max_per_chunk_threaded[t];
@@ -210,7 +210,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
 
         } else {
             tatami::parallelize([&](size_t t, IndexIn_ start, IndexIn_ length) -> void {
-                auto ext = tatami::consecutive_extractor<false, false>(mat, start, length);
+                auto ext = tatami::consecutive_extractor<false>(mat, false, start, length);
                 std::vector<ValueIn_> dbuffer(NR);
                 auto& max_per_chunk = max_per_chunk_threaded[t];
                 auto& num_per_chunk = num_per_chunk_threaded[t];
@@ -277,7 +277,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
 
             if (mat->sparse()) {
                 std::vector<IndexIn_> ibuffer(length);
-                auto ext = tatami::consecutive_extractor<false, true>(mat, 0, NC, start, length);
+                auto ext = tatami::consecutive_extractor<true>(mat, false, 0, NC, start, length);
 
                 for (IndexIn_ c = 0; c < NC; ++c) {
                     auto range = ext->fetch(c, dbuffer.data(), ibuffer.data());
@@ -294,7 +294,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
                 }
 
             } else {
-                auto ext = tatami::consecutive_extractor<false, false>(mat, 0, NC, start, length);
+                auto ext = tatami::consecutive_extractor<false>(mat, false, 0, NC, start, length);
 
                 for (IndexIn_ c = 0; c < NC; ++c) {
                     auto ptr = ext->fetch(c, dbuffer.data());

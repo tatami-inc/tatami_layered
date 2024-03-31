@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "tatami/tatami.hpp"
+#include "tatami_test/tatami_test.hpp"
 #include "tatami_layered/read_layered_sparse_from_matrix_market.hpp"
 #include "byteme/temp_file_path.hpp"
 
@@ -75,12 +76,8 @@ TEST_P(ReadLayeredSparseFromMatrixMarketTest, File) {
         out = tatami_layered::read_layered_sparse_from_matrix_market_some_file(path.c_str());
     }
 
-    auto owrk = out->dense_row();
-    auto rwrk = ref->dense_row();
-    for (size_t i = 0; i < NR; ++i) {
-        auto stuff = owrk->fetch(i);
-        EXPECT_EQ(stuff, rwrk->fetch(i));
-    }
+    tatami_test::test_simple_row_access(out.get(), ref.get());
+    tatami_test::test_simple_column_access(out.get(), ref.get());
 }
 
 TEST_P(ReadLayeredSparseFromMatrixMarketTest, Buffer) {
@@ -124,12 +121,8 @@ TEST_P(ReadLayeredSparseFromMatrixMarketTest, Buffer) {
         out = tatami_layered::read_layered_sparse_from_matrix_market_some_buffer(ptr, n);
     }
 
-    auto owrk = out->dense_row();
-    auto rwrk = ref->dense_row();
-    for (size_t i = 0; i < NR; ++i) {
-        auto stuff = owrk->fetch(i);
-        EXPECT_EQ(stuff, rwrk->fetch(i));
-    }
+    tatami_test::test_simple_row_access(out.get(), ref.get());
+    tatami_test::test_simple_column_access(out.get(), ref.get());
 }
 
 INSTANTIATE_TEST_SUITE_P(
