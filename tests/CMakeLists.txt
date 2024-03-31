@@ -38,6 +38,8 @@ macro(create_libtest target)
       ZLIB::ZLIB
   )
 
+  target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+
   if(NOT HAVE_CXX_FS)
       target_link_libraries(${target} stdc++fs)
   endif()

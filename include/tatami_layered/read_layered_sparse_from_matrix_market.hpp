@@ -39,8 +39,8 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
         parser.scan_preamble();
         NR = parser.get_nrows();
         NC = parser.get_ncols();
-        nchunks = std::max(static_cast<size_t>(1), NC / chunk_size + (leftovers != 0));
         leftovers = NC % chunk_size;
+        nchunks = std::max(static_cast<size_t>(1), NC / chunk_size + (leftovers != 0));
 
         store8.resize(nchunks);
         store16.resize(nchunks);
