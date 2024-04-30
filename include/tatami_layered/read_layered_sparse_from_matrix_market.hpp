@@ -179,7 +179,7 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
  * See `convert_to_layered_sparse()` for more details.
  */
 template<typename Value_ = double, typename Index_ = int, typename ColumnIndex_ = uint16_t>
-std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_text_file(const char * filepath, Index_ chunk_size = 65536, size_t buffer_size = 65536) {
+std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_text_file(const char* filepath, Index_ chunk_size = 65536, size_t buffer_size = 65536) {
     return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::RawFileReader(filepath, buffer_size); }, chunk_size);
 }
 
@@ -201,7 +201,7 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
  * See `convert_to_layered_sparse()` for more details.
  */
 template<typename Value_ = double, typename Index_ = int, typename ColumnIndex_ = uint16_t>
-std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_some_file(const char * filepath, Index_ chunk_size = 65536, size_t buffer_size = 65536) {
+std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_some_file(const char* filepath, Index_ chunk_size = 65536, size_t buffer_size = 65536) {
     return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::SomeFileReader(filepath, buffer_size); }, chunk_size);
 }
 
@@ -221,7 +221,7 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
  * See `convert_to_layered_sparse()` for more details.
  */
 template<typename Value_ = double, typename Index_ = int, typename ColumnIndex_ = uint16_t>
-std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_gzip_file(const char * filepath, Index_ chunk_size = 65536, size_t buffer_size = 65536) {
+std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_gzip_file(const char* filepath, Index_ chunk_size = 65536, size_t buffer_size = 65536) {
     return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>([&]() -> auto { return byteme::GzipFileReader(filepath, buffer_size); }, chunk_size);
 }
 
