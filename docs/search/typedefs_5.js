@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['maybeoracle_0',['MaybeOracle',['https://tatami-inc.github.io/tatami/namespacetatami.html#aab9d426a238a93d02635b4172c725808',1,'tatami']]]
+  ['pointer_0',['pointer',['https://tatami-inc.github.io/tatami/structtatami_1_1SomeNumericArray_1_1Iterator.html#a613940ff1968b36ce461efb2cb6b7d25',1,'tatami::SomeNumericArray::Iterator']]]
 ];
