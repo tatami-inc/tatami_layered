@@ -6,8 +6,6 @@ FetchContent_Declare(
   GIT_TAG master
 )
 
-FetchContent_MakeAvailable(eminem)
-
 FetchContent_Declare(
   tatami
   GIT_REPOSITORY https://github.com/tatami-inc/tatami
@@ -15,3 +13,4 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(tatami)
+FetchContent_MakeAvailable(eminem)
