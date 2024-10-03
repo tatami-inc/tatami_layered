@@ -82,9 +82,9 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a574cd730be3c760582af78fe44efe3ac" id="r_a574cd730be3c760582af78fe44efe3ac"><td class="memTemplParams" colspan="2">template&lt;typename ValueOut_  = double, typename IndexOut_  = int, typename ColumnIndex_  = uint16_t, typename ValueIn_ , typename IndexIn_ &gt; </td></tr>
-<tr class="memitem:a574cd730be3c760582af78fe44efe3ac"><td class="memTemplItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; ValueOut_, IndexOut_ &gt; &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacetatami__layered.html#a574cd730be3c760582af78fe44efe3ac">convert_to_layered_sparse</a> (const <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; ValueIn_, IndexIn_ &gt; *mat, IndexIn_ chunk_size=65536, int num_threads=1)</td></tr>
-<tr class="separator:a574cd730be3c760582af78fe44efe3ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa8fecfb23f59105c5f1cadda2971afd7" id="r_aa8fecfb23f59105c5f1cadda2971afd7"><td class="memTemplParams" colspan="2">template&lt;typename ValueOut_  = double, typename IndexOut_  = int, typename ColumnIndex_  = uint16_t, typename ValueIn_ , typename IndexIn_ &gt; </td></tr>
+<tr class="memitem:aa8fecfb23f59105c5f1cadda2971afd7"><td class="memTemplItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; ValueOut_, IndexOut_ &gt; &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacetatami__layered.html#aa8fecfb23f59105c5f1cadda2971afd7">convert_to_layered_sparse</a> (const <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; ValueIn_, IndexIn_ &gt; &amp;mat, IndexIn_ chunk_size=65536, int num_threads=1)</td></tr>
+<tr class="separator:aa8fecfb23f59105c5f1cadda2971afd7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8da9e13208dd478b9fa73d3395d6e7d9" id="r_a8da9e13208dd478b9fa73d3395d6e7d9"><td class="memTemplParams" colspan="2">template&lt;typename Value_  = double, typename Index_  = int, typename ColumnIndex_  = uint16_t&gt; </td></tr>
 <tr class="memitem:a8da9e13208dd478b9fa73d3395d6e7d9"><td class="memTemplItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; Value_, Index_ &gt; &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacetatami__layered.html#a8da9e13208dd478b9fa73d3395d6e7d9">read_layered_sparse_from_matrix_market_text_file</a> (const char *filepath, Index_ chunk_size=65536, size_t buffer_size=65536)</td></tr>
 <tr class="separator:a8da9e13208dd478b9fa73d3395d6e7d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -107,8 +107,8 @@ Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Create layered sparse matrices for <b>tatami</b>. </p>
 </div><h2 class="groupheader">Function Documentation</h2>
-<a id="a574cd730be3c760582af78fe44efe3ac" name="a574cd730be3c760582af78fe44efe3ac"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a574cd730be3c760582af78fe44efe3ac">&#9670;&#160;</a></span>convert_to_layered_sparse()</h2>
+<a id="aa8fecfb23f59105c5f1cadda2971afd7" name="aa8fecfb23f59105c5f1cadda2971afd7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa8fecfb23f59105c5f1cadda2971afd7">&#9670;&#160;</a></span>convert_to_layered_sparse()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -118,7 +118,7 @@ template&lt;typename ValueOut_  = double, typename IndexOut_  = int, typename Co
         <tr>
           <td class="memname">std::shared_ptr&lt; <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; ValueOut_, IndexOut_ &gt; &gt; tatami_layered::convert_to_layered_sparse </td>
           <td>(</td>
-          <td class="paramtype">const <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; ValueIn_, IndexIn_ &gt; *&#160;</td>
+          <td class="paramtype">const <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; ValueIn_, IndexIn_ &gt; &amp;&#160;</td>
           <td class="paramname"><em>mat</em>, </td>
         </tr>
         <tr>
@@ -214,7 +214,7 @@ template&lt;typename Value_  = double, typename Index_  = int, typename ColumnIn
   </table>
   </dd>
 </dl>
-<p>This function loads a layered sparse integer matrix from a Matrix Market file. The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them. See <code><a class="el" href="namespacetatami__layered.html#a574cd730be3c760582af78fe44efe3ac">convert_to_layered_sparse()</a></code> for more details. </p>
+<p>This function loads a layered sparse integer matrix from a Matrix Market file. The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them. See <code><a class="el" href="namespacetatami__layered.html#aa8fecfb23f59105c5f1cadda2971afd7">convert_to_layered_sparse()</a></code> for more details. </p>
 
 </div>
 </div>
@@ -268,7 +268,7 @@ template&lt;typename Value_  = double, typename Index_  = int, typename ColumnIn
   </table>
   </dd>
 </dl>
-<p>This function loads a layered sparse integer matrix from a Matrix Market file. The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them. See <code><a class="el" href="namespacetatami__layered.html#a574cd730be3c760582af78fe44efe3ac">convert_to_layered_sparse()</a></code> for more details. </p>
+<p>This function loads a layered sparse integer matrix from a Matrix Market file. The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them. See <code><a class="el" href="namespacetatami__layered.html#aa8fecfb23f59105c5f1cadda2971afd7">convert_to_layered_sparse()</a></code> for more details. </p>
 
 </div>
 </div>
@@ -322,7 +322,7 @@ template&lt;typename Value_  = double, typename Index_  = int, typename ColumnIn
   </table>
   </dd>
 </dl>
-<p>This function loads a layered sparse integer matrix from a Matrix Market file. The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them. See <code><a class="el" href="namespacetatami__layered.html#a574cd730be3c760582af78fe44efe3ac">convert_to_layered_sparse()</a></code> for more details. </p>
+<p>This function loads a layered sparse integer matrix from a Matrix Market file. The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them. See <code><a class="el" href="namespacetatami__layered.html#aa8fecfb23f59105c5f1cadda2971afd7">convert_to_layered_sparse()</a></code> for more details. </p>
 
 </div>
 </div>
@@ -376,7 +376,7 @@ template&lt;typename Value_  = double, typename Index_  = int, typename ColumnIn
   </table>
   </dd>
 </dl>
-<p>This function loads a layered sparse integer matrix from a buffer with the contents of a Matrix Market file. The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them. See <code><a class="el" href="namespacetatami__layered.html#a574cd730be3c760582af78fe44efe3ac">convert_to_layered_sparse()</a></code> for more details. </p>
+<p>This function loads a layered sparse integer matrix from a buffer with the contents of a Matrix Market file. The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them. See <code><a class="el" href="namespacetatami__layered.html#aa8fecfb23f59105c5f1cadda2971afd7">convert_to_layered_sparse()</a></code> for more details. </p>
 
 </div>
 </div>
@@ -437,7 +437,7 @@ template&lt;typename Value_  = double, typename Index_  = int, typename ColumnIn
   </table>
   </dd>
 </dl>
-<p>This function loads a layered sparse integer matrix from a buffer with the contents of a Matrix Market file. The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them. See <code><a class="el" href="namespacetatami__layered.html#a574cd730be3c760582af78fe44efe3ac">convert_to_layered_sparse()</a></code> for more details. </p>
+<p>This function loads a layered sparse integer matrix from a buffer with the contents of a Matrix Market file. The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them. See <code><a class="el" href="namespacetatami__layered.html#aa8fecfb23f59105c5f1cadda2971afd7">convert_to_layered_sparse()</a></code> for more details. </p>
 
 </div>
 </div>
@@ -498,7 +498,7 @@ template&lt;typename Value_  = double, typename Index_  = int, typename ColumnIn
   </table>
   </dd>
 </dl>
-<p>This function loads a layered sparse integer matrix from a buffer with the contents of a Matrix Market file. The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them. See <code><a class="el" href="namespacetatami__layered.html#a574cd730be3c760582af78fe44efe3ac">convert_to_layered_sparse()</a></code> for more details. </p>
+<p>This function loads a layered sparse integer matrix from a buffer with the contents of a Matrix Market file. The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them. See <code><a class="el" href="namespacetatami__layered.html#aa8fecfb23f59105c5f1cadda2971afd7">convert_to_layered_sparse()</a></code> for more details. </p>
 
 </div>
 </div>

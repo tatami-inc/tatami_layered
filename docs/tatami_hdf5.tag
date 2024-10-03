@@ -25,8 +25,8 @@
       <type>std::shared_ptr&lt; tatami::Matrix&lt; ValueOut_, IndexOut_ &gt; &gt;</type>
       <name>convert_to_layered_sparse</name>
       <anchorfile>namespacetatami__layered.html</anchorfile>
-      <anchor>a574cd730be3c760582af78fe44efe3ac</anchor>
-      <arglist>(const tatami::Matrix&lt; ValueIn_, IndexIn_ &gt; *mat, IndexIn_ chunk_size=65536, int num_threads=1)</arglist>
+      <anchor>aa8fecfb23f59105c5f1cadda2971afd7</anchor>
+      <arglist>(const tatami::Matrix&lt; ValueIn_, IndexIn_ &gt; &amp;mat, IndexIn_ chunk_size=65536, int num_threads=1)</arglist>
     </member>
     <member kind="function">
       <type>std::shared_ptr&lt; tatami::Matrix&lt; Value_, Index_ &gt; &gt;</type>

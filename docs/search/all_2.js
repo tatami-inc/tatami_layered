@@ -22,7 +22,7 @@ var searchData=
   ['convert_5fto_5fdense_2ehpp_19',['convert_to_dense.hpp',['https://tatami-inc.github.io/tatami/convert__to__dense_8hpp.html',1,'']]],
   ['convert_5fto_5ffragmented_5fsparse_20',['convert_to_fragmented_sparse',['https://tatami-inc.github.io/tatami/namespacetatami.html#a2a4c4e213ecc4225882b3cf8b21600e0',1,'tatami']]],
   ['convert_5fto_5ffragmented_5fsparse_2ehpp_21',['convert_to_fragmented_sparse.hpp',['https://tatami-inc.github.io/tatami/convert__to__fragmented__sparse_8hpp.html',1,'']]],
-  ['convert_5fto_5flayered_5fsparse_22',['convert_to_layered_sparse',['../namespacetatami__layered.html#a574cd730be3c760582af78fe44efe3ac',1,'tatami_layered']]],
+  ['convert_5fto_5flayered_5fsparse_22',['convert_to_layered_sparse',['../namespacetatami__layered.html#aa8fecfb23f59105c5f1cadda2971afd7',1,'tatami_layered']]],
   ['convert_5fto_5flayered_5fsparse_2ehpp_23',['convert_to_layered_sparse.hpp',['../convert__to__layered__sparse_8hpp.html',1,'']]],
   ['copy_2ehpp_24',['copy.hpp',['https://tatami-inc.github.io/tatami/copy_8hpp.html',1,'']]],
   ['copy_5fn_25',['copy_n',['https://tatami-inc.github.io/tatami/namespacetatami.html#ab52a806e3f13a68741a9e1f77dccab14',1,'tatami']]],
