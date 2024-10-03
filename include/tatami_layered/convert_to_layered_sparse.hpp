@@ -21,8 +21,8 @@ namespace tatami_layered {
  * @cond
  */
 template<typename ColIndex_, typename ValueOut_ = double, typename IndexOut_ = int, typename ValueIn_, typename IndexIn_>
-std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tatami::Matrix<ValueIn_, IndexIn_>* mat, IndexIn_ chunk_size, int nthreads) {
-    auto NR = mat->nrow(), NC = mat->ncol();
+std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tatami::Matrix<ValueIn_, IndexIn_>& mat, IndexIn_ chunk_size, int nthreads) {
+    auto NR = mat.nrow(), NC = mat.ncol();
     IndexIn_ leftovers = NC % chunk_size;
     size_t nchunks = std::max(static_cast<size_t>(1), static_cast<size_t>(NC) / chunk_size + (leftovers != 0));
 
@@ -41,11 +41,11 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
         for (auto& x : max_per_chunk) { x.resize(NR); }
         for (auto& x : num_per_chunk) { x.resize(NR); }
 
-        if (mat->sparse()) {
+        if (mat.sparse()) {
             tatami::parallelize([&](size_t, IndexIn_ start, IndexIn_ length) -> void {
                 tatami::Options opt;
                 opt.sparse_ordered_index = false;
-                auto ext = tatami::consecutive_extractor<true>(mat, true, start, length, opt);
+                auto ext = tatami::consecutive_extractor<true>(&mat, true, start, length, opt);
                 std::vector<ValueIn_> dbuffer(NC);
                 std::vector<IndexIn_> ibuffer(NC);
 
@@ -64,7 +64,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
 
         } else {
             tatami::parallelize([&](size_t, IndexIn_ start, IndexIn_ length) -> void {
-                auto ext = tatami::consecutive_extractor<false>(mat, true, start, length);
+                auto ext = tatami::consecutive_extractor<false>(&mat, true, start, length);
                 std::vector<ValueIn_> dbuffer(NC);
 
                 for (IndexIn_ r = start, end = start + length; r < end; ++r) {
@@ -101,9 +101,9 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
             std::vector<size_t> output_positions(nchunks);
             std::vector<ValueIn_> dbuffer(NC);
 
-            if (mat->sparse()) {
+            if (mat.sparse()) {
                 std::vector<IndexIn_> ibuffer(NC);
-                auto ext = tatami::consecutive_extractor<true>(mat, true, start, length);
+                auto ext = tatami::consecutive_extractor<true>(&mat, true, start, length);
                 for (IndexIn_ r = start, end = start + length; r < end; ++r) {
                     for (size_t chunk = 0; chunk < nchunks; ++chunk) {
                         output_positions[chunk] = get_sparse_ptr(store8, store16, store32, assigned_category, assigned_position, chunk, r);
@@ -120,7 +120,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
                 }
 
             } else {
-                auto ext = tatami::consecutive_extractor<false>(mat, true, start, length);
+                auto ext = tatami::consecutive_extractor<false>(&mat, true, start, length);
                 for (IndexIn_ r = start, end = start + length; r < end; ++r) {
                     for (size_t chunk = 0; chunk < nchunks; ++chunk) {
                         output_positions[chunk] = get_sparse_ptr(store8, store16, store32, assigned_category, assigned_position, chunk, r);
@@ -154,8 +154,8 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
 }
 
 template<typename ColIndex_, typename ValueOut_ = double, typename IndexOut_ = int, typename ValueIn_, typename IndexIn_>
-std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const tatami::Matrix<ValueIn_, IndexIn_>* mat, IndexIn_ chunk_size, int nthreads) {
-    auto NR = mat->nrow(), NC = mat->ncol();
+std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const tatami::Matrix<ValueIn_, IndexIn_>& mat, IndexIn_ chunk_size, int nthreads) {
+    auto NR = mat.nrow(), NC = mat.ncol();
     IndexIn_ leftovers = NC % chunk_size;
     size_t nchunks = std::max(static_cast<size_t>(1), static_cast<size_t>(NC) / chunk_size + (leftovers != 0));
 
@@ -181,11 +181,11 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
             for (auto& x : num_per_chunk) { x.resize(NR); }
         }
 
-        if (mat->sparse()) {
+        if (mat.sparse()) {
             tatami::parallelize([&](size_t t, IndexIn_ start, IndexIn_ length) -> void {
                 tatami::Options opt;
                 opt.sparse_ordered_index = false;
-                auto ext = tatami::consecutive_extractor<true>(mat, false, start, length, opt);
+                auto ext = tatami::consecutive_extractor<true>(&mat, false, start, length, opt);
                 std::vector<ValueIn_> dbuffer(NR);
                 std::vector<IndexIn_> ibuffer(NR);
                 auto& max_per_chunk = max_per_chunk_threaded[t];
@@ -210,7 +210,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
 
         } else {
             tatami::parallelize([&](size_t t, IndexIn_ start, IndexIn_ length) -> void {
-                auto ext = tatami::consecutive_extractor<false>(mat, false, start, length);
+                auto ext = tatami::consecutive_extractor<false>(&mat, false, start, length);
                 std::vector<ValueIn_> dbuffer(NR);
                 auto& max_per_chunk = max_per_chunk_threaded[t];
                 auto& num_per_chunk = num_per_chunk_threaded[t];
@@ -275,9 +275,9 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
                 }
             }
 
-            if (mat->sparse()) {
+            if (mat.sparse()) {
                 std::vector<IndexIn_> ibuffer(length);
-                auto ext = tatami::consecutive_extractor<true>(mat, false, 0, NC, start, length);
+                auto ext = tatami::consecutive_extractor<true>(&mat, false, 0, NC, start, length);
 
                 for (IndexIn_ c = 0; c < NC; ++c) {
                     auto range = ext->fetch(c, dbuffer.data(), ibuffer.data());
@@ -294,7 +294,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
                 }
 
             } else {
-                auto ext = tatami::consecutive_extractor<false>(mat, false, 0, NC, start, length);
+                auto ext = tatami::consecutive_extractor<false>(&mat, false, 0, NC, start, length);
 
                 for (IndexIn_ c = 0; c < NC; ++c) {
                     auto ptr = ext->fetch(c, dbuffer.data());
@@ -352,18 +352,30 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
  * For example, if `ColumnIndex_` was set to an unsigned 8-bit integer, `chunk_size` would be automatically reduced to 256.
  */
 template<typename ValueOut_ = double, typename IndexOut_ = int, typename ColumnIndex_ = uint16_t, typename ValueIn_, typename IndexIn_>
-std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_to_layered_sparse(const tatami::Matrix<ValueIn_, IndexIn_>* mat, IndexIn_ chunk_size = 65536, int num_threads = 1) {
+std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_to_layered_sparse(const tatami::Matrix<ValueIn_, IndexIn_>& mat, IndexIn_ chunk_size = 65536, int num_threads = 1) {
     size_t max_index = static_cast<size_t>(std::numeric_limits<ColumnIndex_>::max()) + 1;
     if (static_cast<size_t>(chunk_size) > max_index) {
         chunk_size = max_index;
     }
 
-    if (mat->prefer_rows()) {
+    if (mat.prefer_rows()) {
         return convert_by_row<ColumnIndex_, ValueOut_, IndexOut_>(mat, chunk_size, num_threads);
     } else {
         return convert_by_column<ColumnIndex_, ValueOut_, IndexOut_>(mat, chunk_size, num_threads);
     }
 }
+
+/**
+ * @cond
+ */
+// Provided for back-compatibility.
+template<typename ValueOut_ = double, typename IndexOut_ = int, typename ColumnIndex_ = uint16_t, typename ValueIn_, typename IndexIn_>
+std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_to_layered_sparse(const tatami::Matrix<ValueIn_, IndexIn_>* mat, IndexIn_ chunk_size = 65536, int num_threads = 1) {
+    return convert_to_layered_sparse<ValueOut_, IndexOut_, ColumnIndex_, ValueIn_, IndexIn_>(*mat, chunk_size, num_threads);
+}
+/**
+ * @endcond
+ */
 
 }
 

@@ -18,7 +18,7 @@ We can easily convert an existing `tatami::Matrix` to a layered sparse matrix:
 ```cpp
 #include "tatami_layered/tatami_layered.hpp"
 
-auto converted = tatami_layered::convert_to_layered_sparse(mat.get());
+auto converted = tatami_layered::convert_to_layered_sparse(*mat);
 ```
 
 We can also read a layered sparse matrix from a Matrix Market file:
