@@ -1,27 +1,21 @@
 include(FetchContent)
 FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/afd902e992b720d1b3e106bc5e425a5768872265.zip
+  tatami_test
+  GIT_REPOSITORY https://github.com/tatami-inc/tatami_test
+  GIT_TAG master
 )
-
-# For Windows: Prevent overriding the parent project's compiler/linker settings
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-
-# Avoid installing GoogleTest when installing this project.
-option(INSTALL_GTEST "Enable installation of googletest." OFF)
-
-FetchContent_MakeAvailable(googletest)
-
-enable_testing()
+FetchContent_MakeAvailable(tatami_test)
 
 find_package(ZLIB)
-
 include(GoogleTest)
 
 include(CheckIncludeFiles)
 check_include_files(filesystem HAVE_CXX_FS)
 
-set(CODE_COVERAGE OFF CACHE BOOL "Enable coverage testing")
+option(DO_CODE_COVERAGE "Enable coverage testing" OFF)
+if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    option(DO_CODE_COVERAGE ON)
+endif()
 
 # Avoid duplicating the target definition depending on whether OpenMP is to be used.
 macro(create_libtest target)
@@ -33,9 +27,9 @@ macro(create_libtest target)
   
   target_link_libraries(
       ${target}
-      gtest_main
       tatami_layered
       ZLIB::ZLIB
+      tatami_test
   )
 
   target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
@@ -44,7 +38,7 @@ macro(create_libtest target)
       target_link_libraries(${target} stdc++fs)
   endif()
 
-  if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  if(DO_CODE_COVERAGE)
       target_compile_options(${target} PRIVATE -O0 -g --coverage)
       target_link_options(${target} PRIVATE --coverage)
   endif()

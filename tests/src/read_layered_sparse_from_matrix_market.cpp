@@ -76,8 +76,8 @@ TEST_P(ReadLayeredSparseFromMatrixMarketTest, File) {
         out = tatami_layered::read_layered_sparse_from_matrix_market_some_file(path.c_str());
     }
 
-    tatami_test::test_simple_row_access(out.get(), ref.get());
-    tatami_test::test_simple_column_access(out.get(), ref.get());
+    tatami_test::test_simple_row_access(*out, *ref);
+    tatami_test::test_simple_column_access(*out, *ref);
 }
 
 TEST_P(ReadLayeredSparseFromMatrixMarketTest, Buffer) {
@@ -121,8 +121,8 @@ TEST_P(ReadLayeredSparseFromMatrixMarketTest, Buffer) {
         out = tatami_layered::read_layered_sparse_from_matrix_market_some_buffer(ptr, n);
     }
 
-    tatami_test::test_simple_row_access(out.get(), ref.get());
-    tatami_test::test_simple_column_access(out.get(), ref.get());
+    tatami_test::test_simple_row_access(*out, *ref);
+    tatami_test::test_simple_column_access(*out, *ref);
 }
 
 INSTANTIATE_TEST_SUITE_P(
