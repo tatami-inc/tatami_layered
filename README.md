@@ -2,7 +2,7 @@
 
 ![Unit tests](https://github.com/tatami-inc/tatami_layered/actions/workflows/run-tests.yaml/badge.svg)
 ![Documentation](https://github.com/tatami-inc/tatami_layered/actions/workflows/doxygenate.yaml/badge.svg)
-[![Codecov](https://codecov.io/gh/tatami-inc/tatami_layered/branch/master/graph/badge.svg)](https://codecov.io/gh/tatami-inc/tatami_layered)
+[![codecov](https://codecov.io/gh/tatami-inc/tatami_layered/graph/badge.svg?token=I5w28POARD)](https://codecov.io/gh/tatami-inc/tatami_layered)
 
 ## Overview
 
