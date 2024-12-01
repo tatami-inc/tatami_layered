@@ -3,8 +3,8 @@
 #include "tatami/tatami.hpp"
 #include "tatami_test/tatami_test.hpp"
 #include "tatami_layered/read_layered_sparse_from_matrix_market.hpp"
-#include "byteme/temp_file_path.hpp"
 
+#include "temp_file_path.h"
 #include "mock_layered_sparse_data.h"
 
 #include <fstream>
@@ -52,7 +52,7 @@ TEST_P(ReadLayeredSparseFromMatrixMarketTest, File) {
     typedef tatami::CompressedSparseColumnMatrix<double, int, decltype(vals), decltype(rows), decltype(indptrs)> SparseMat; 
     auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, vals, rows, indptrs)); 
 
-    auto path = byteme::temp_file_path("tatami-tests-ext-MatrixMarket", ".mtx");
+    auto path = temp_file_path("tatami-tests-ext-MatrixMarket");
     if (!compressed) {
         std::ofstream file_out(path);
         write_matrix_market(file_out, NR, NC, vals, rows, cols, scrambled);
@@ -98,7 +98,7 @@ TEST_P(ReadLayeredSparseFromMatrixMarketTest, Buffer) {
     auto contents = buf_out.str();
 
     if (compressed) {
-        auto path = byteme::temp_file_path("tatami-tests-ext-MatrixMarket", ".mtx.gz");
+        auto path = temp_file_path("tatami-tests-ext-MatrixMarket-gzip");
         gzFile ohandle = gzopen(path.c_str(), "w");
         gzwrite(ohandle, contents.data(), contents.size());
         gzclose(ohandle);
