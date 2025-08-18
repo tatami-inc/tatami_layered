@@ -1,14 +1,16 @@
 #ifndef TATAMI_CONVERT_TO_LAYERED_SPARSE_HPP
 #define TATAMI_CONVERT_TO_LAYERED_SPARSE_HPP
 
-#include "tatami/tatami.hpp"
-#include "utils.hpp"
-
 #include <cstdint>
 #include <vector>
 #include <memory>
 #include <limits>
 #include <algorithm>
+
+#include "tatami/tatami.hpp"
+#include "sanisizer/sanisizer.hpp"
+
+#include "utils.hpp"
 
 /**
  * @file convert_to_layered_sparse.hpp
@@ -24,30 +26,42 @@ template<typename ColIndex_, typename ValueOut_ = double, typename IndexOut_ = i
 std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tatami::Matrix<ValueIn_, IndexIn_>& mat, IndexIn_ chunk_size, int nthreads) {
     auto NR = mat.nrow(), NC = mat.ncol();
     IndexIn_ leftovers = NC % chunk_size;
-    size_t nchunks = std::max(static_cast<size_t>(1), static_cast<size_t>(NC) / chunk_size + (leftovers != 0));
+    IndexIn_ nchunks = atleastone(NC / chunk_size + (leftovers != 0));
 
-    std::vector<Holder<uint8_t, IndexOut_, ColIndex_> > store8(nchunks);
-    std::vector<Holder<uint16_t, IndexOut_, ColIndex_> > store16(nchunks);
-    std::vector<Holder<uint32_t, IndexOut_, ColIndex_> > store32(nchunks);
+    auto store8  = tatami::create_container_of_Index_size<std::vector<Holder< std::uint8_t, IndexOut_, ColIndex_> > >(nchunks);
+    auto store16 = tatami::create_container_of_Index_size<std::vector<Holder<std::uint16_t, IndexOut_, ColIndex_> > >(nchunks);
+    auto store32 = tatami::create_container_of_Index_size<std::vector<Holder<std::uint32_t, IndexOut_, ColIndex_> > >(nchunks);
 
-    std::vector<std::vector<IndexOut_> > identities8(nchunks), identities16(nchunks), identities32(nchunks);
-    std::vector<std::vector<IndexOut_> > assigned_position(nchunks);
-    std::vector<std::vector<Category> > assigned_category(nchunks);
+    auto identities8  = tatami::create_container_of_Index_size<std::vector<std::vector<IndexOut_> > >(nchunks);
+    auto identities16 = tatami::create_container_of_Index_size<std::vector<std::vector<IndexOut_> > >(nchunks);
+    auto identities32 = tatami::create_container_of_Index_size<std::vector<std::vector<IndexOut_> > >(nchunks);
+
+    auto assigned_position = tatami::create_container_of_Index_size<std::vector<std::vector<IndexOut_> > >(nchunks);
+    auto assigned_category = tatami::create_container_of_Index_size<std::vector<std::vector<Category> > >(nchunks);
 
     // First pass to define the allocations.
     {
-        std::vector<std::vector<Category> > max_per_chunk(nchunks);
-        std::vector<std::vector<IndexIn_> > num_per_chunk(nchunks);
-        for (auto& x : max_per_chunk) { x.resize(NR); }
-        for (auto& x : num_per_chunk) { x.resize(NR); }
+        auto max_per_chunk = tatami::create_container_of_Index_size<std::vector<std::vector<Category> > >(nchunks);
+        tatami::cast_Index_to_container_size<std::vector<Category> >(NR); // check that the cast within resize() is safe.
+        for (auto& x : max_per_chunk) {
+            x.resize(NR);
+        }
+
+        auto num_per_chunk = tatami::create_container_of_Index_size<std::vector<std::vector<IndexIn_> > >(nchunks);
+        tatami::cast_Index_to_container_size<std::vector<IndexIn_> >(NR);
+        for (auto& x : num_per_chunk) {
+            x.resize(NR);
+        }
 
         if (mat.sparse()) {
-            tatami::parallelize([&](size_t, IndexIn_ start, IndexIn_ length) -> void {
-                tatami::Options opt;
-                opt.sparse_ordered_index = false;
-                auto ext = tatami::consecutive_extractor<true>(&mat, true, start, length, opt);
-                std::vector<ValueIn_> dbuffer(NC);
-                std::vector<IndexIn_> ibuffer(NC);
+            tatami::parallelize([&](int, IndexIn_ start, IndexIn_ length) -> void {
+                auto ext = tatami::consecutive_extractor<true>(mat, true, start, length, [&]{
+                    tatami::Options opt;
+                    opt.sparse_ordered_index = false;
+                    return opt;
+                }());
+                auto dbuffer = tatami::create_container_of_Index_size<std::vector<ValueIn_> >(NC);
+                auto ibuffer = tatami::create_container_of_Index_size<std::vector<IndexIn_> >(NC);
 
                 for (IndexIn_ r = start, end = start + length; r < end; ++r) {
                     auto range = ext->fetch(r, dbuffer.data(), ibuffer.data());
@@ -63,9 +77,9 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
             }, NR, nthreads);
 
         } else {
-            tatami::parallelize([&](size_t, IndexIn_ start, IndexIn_ length) -> void {
-                auto ext = tatami::consecutive_extractor<false>(&mat, true, start, length);
-                std::vector<ValueIn_> dbuffer(NC);
+            tatami::parallelize([&](int, IndexIn_ start, IndexIn_ length) -> void {
+                auto ext = tatami::consecutive_extractor<false>(mat, true, start, length);
+                auto dbuffer = tatami::create_container_of_Index_size<std::vector<ValueIn_> >(NC);
 
                 for (IndexIn_ r = start, end = start + length; r < end; ++r) {
                     auto ptr = ext->fetch(r, dbuffer.data());
@@ -97,22 +111,23 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
 
     // Second pass to actually fill the vectors.
     {
-        tatami::parallelize([&](size_t, IndexIn_ start, IndexIn_ length) -> void {
-            std::vector<size_t> output_positions(nchunks);
-            std::vector<ValueIn_> dbuffer(NC);
+        tatami::parallelize([&](int, IndexIn_ start, IndexIn_ length) -> void {
+            auto output_positions = tatami::create_container_of_Index_size<std::vector<std::size_t> >(nchunks);
+            auto dbuffer = tatami::create_container_of_Index_size<std::vector<ValueIn_> >(NC);
 
             if (mat.sparse()) {
-                std::vector<IndexIn_> ibuffer(NC);
-                auto ext = tatami::consecutive_extractor<true>(&mat, true, start, length);
+                auto ibuffer = tatami::create_container_of_Index_size<std::vector<IndexIn_> >(NC);
+                auto ext = tatami::consecutive_extractor<true>(mat, true, start, length);
+
                 for (IndexIn_ r = start, end = start + length; r < end; ++r) {
-                    for (size_t chunk = 0; chunk < nchunks; ++chunk) {
+                    for (decltype(nchunks) chunk = 0; chunk < nchunks; ++chunk) {
                         output_positions[chunk] = get_sparse_ptr(store8, store16, store32, assigned_category, assigned_position, chunk, r);
                     }
 
                     auto range = ext->fetch(r, dbuffer.data(), ibuffer.data());
                     for (IndexIn_ i = 0; i < range.number; ++i) {
                         if (range.value[i]) {
-                            size_t chunk = range.index[i] / chunk_size;
+                            IndexIn_ chunk = range.index[i] / chunk_size;
                             IndexIn_ col = range.index[i] % chunk_size;
                             fill_sparse_value(store8, store16, store32, assigned_category[chunk][r], chunk, col, range.value[i], output_positions[chunk]++);
                         }
@@ -120,16 +135,17 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
                 }
 
             } else {
-                auto ext = tatami::consecutive_extractor<false>(&mat, true, start, length);
+                auto ext = tatami::consecutive_extractor<false>(mat, true, start, length);
+
                 for (IndexIn_ r = start, end = start + length; r < end; ++r) {
-                    for (size_t chunk = 0; chunk < nchunks; ++chunk) {
+                    for (decltype(nchunks) chunk = 0; chunk < nchunks; ++chunk) {
                         output_positions[chunk] = get_sparse_ptr(store8, store16, store32, assigned_category, assigned_position, chunk, r);
                     }
 
                     auto ptr = ext->fetch(r, dbuffer.data());
                     for (IndexIn_ c = 0; c < NC; ++c) {
                         if (ptr[c]) {
-                            size_t chunk = c / chunk_size;
+                            IndexIn_ chunk = c / chunk_size;
                             IndexIn_ col = c % chunk_size;
                             fill_sparse_value(store8, store16, store32, assigned_category[chunk][r], chunk, col, ptr[c], output_positions[chunk]++);
                         }
@@ -157,37 +173,49 @@ template<typename ColIndex_, typename ValueOut_ = double, typename IndexOut_ = i
 std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const tatami::Matrix<ValueIn_, IndexIn_>& mat, IndexIn_ chunk_size, int nthreads) {
     auto NR = mat.nrow(), NC = mat.ncol();
     IndexIn_ leftovers = NC % chunk_size;
-    size_t nchunks = std::max(static_cast<size_t>(1), static_cast<size_t>(NC) / chunk_size + (leftovers != 0));
+    IndexIn_ nchunks = atleastone(NC / chunk_size + (leftovers != 0));
 
-    std::vector<Holder<uint8_t, IndexOut_, ColIndex_> > store8(nchunks);
-    std::vector<Holder<uint16_t, IndexOut_, ColIndex_> > store16(nchunks);
-    std::vector<Holder<uint32_t, IndexOut_, ColIndex_> > store32(nchunks);
+    auto store8  = tatami::create_container_of_Index_size<std::vector<Holder< std::uint8_t, IndexOut_, ColIndex_> > >(nchunks);
+    auto store16 = tatami::create_container_of_Index_size<std::vector<Holder<std::uint16_t, IndexOut_, ColIndex_> > >(nchunks);
+    auto store32 = tatami::create_container_of_Index_size<std::vector<Holder<std::uint32_t, IndexOut_, ColIndex_> > >(nchunks);
 
-    std::vector<std::vector<IndexOut_> > identities8(nchunks), identities16(nchunks), identities32(nchunks);
-    std::vector<std::vector<IndexOut_> > assigned_position(nchunks);
-    std::vector<std::vector<Category> > assigned_category(nchunks);
+    auto identities8  = tatami::create_container_of_Index_size<std::vector<std::vector<IndexOut_> > >(nchunks);
+    auto identities16 = tatami::create_container_of_Index_size<std::vector<std::vector<IndexOut_> > >(nchunks);
+    auto identities32 = tatami::create_container_of_Index_size<std::vector<std::vector<IndexOut_> > >(nchunks);
+
+    auto assigned_position = tatami::create_container_of_Index_size<std::vector<std::vector<IndexOut_> > >(nchunks);
+    auto assigned_category = tatami::create_container_of_Index_size<std::vector<std::vector<Category> > >(nchunks);
 
     // First pass to define the allocations.
     {
-        std::vector<std::vector<std::vector<Category> > > max_per_chunk_threaded(nthreads);
+        auto max_per_chunk_threaded = sanisizer::create<std::vector<std::vector<std::vector<Category> > > >(nthreads);
+        tatami::cast_Index_to_container_size<std::vector<Category> >(NR); // check that the cast within resize() is safe.
         for (auto& max_per_chunk : max_per_chunk_threaded) { 
-            max_per_chunk.resize(nchunks);
-            for (auto& x : max_per_chunk) { x.resize(NR); }
+            tatami::resize_container_to_Index_size<std::vector<std::vector<Category> > >(max_per_chunk, nchunks);
+            for (auto& x : max_per_chunk) {
+                x.resize(NR);
+            }
         }
 
-        std::vector<std::vector<std::vector<IndexIn_> > > num_per_chunk_threaded(nthreads);
+        auto num_per_chunk_threaded = sanisizer::create<std::vector<std::vector<std::vector<IndexIn_> > > >(nthreads);
+        tatami::cast_Index_to_container_size<std::vector<IndexIn_> >(NR);
         for (auto& num_per_chunk : num_per_chunk_threaded) { 
-            num_per_chunk.resize(nchunks);
-            for (auto& x : num_per_chunk) { x.resize(NR); }
+            tatami::resize_container_to_Index_size<std::vector<std::vector<IndexIn_> > >(num_per_chunk, nchunks);
+            for (auto& x : num_per_chunk) {
+                x.resize(NR);
+            }
         }
 
         if (mat.sparse()) {
-            tatami::parallelize([&](size_t t, IndexIn_ start, IndexIn_ length) -> void {
-                tatami::Options opt;
-                opt.sparse_ordered_index = false;
-                auto ext = tatami::consecutive_extractor<true>(&mat, false, start, length, opt);
-                std::vector<ValueIn_> dbuffer(NR);
-                std::vector<IndexIn_> ibuffer(NR);
+            tatami::parallelize([&](int t, IndexIn_ start, IndexIn_ length) -> void {
+                auto ext = tatami::consecutive_extractor<true>(&mat, false, start, length, [&]{
+                    tatami::Options opt;
+                    opt.sparse_ordered_index = false;
+                    return opt;
+                }());
+                auto dbuffer = tatami::create_container_of_Index_size<std::vector<ValueIn_> >(NR);
+                auto ibuffer = tatami::create_container_of_Index_size<std::vector<IndexIn_> >(NR);
+
                 auto& max_per_chunk = max_per_chunk_threaded[t];
                 auto& num_per_chunk = num_per_chunk_threaded[t];
 
@@ -211,7 +239,8 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
         } else {
             tatami::parallelize([&](size_t t, IndexIn_ start, IndexIn_ length) -> void {
                 auto ext = tatami::consecutive_extractor<false>(&mat, false, start, length);
-                std::vector<ValueIn_> dbuffer(NR);
+                auto dbuffer = tatami::create_container_of_Index_size<std::vector<ValueIn_> >(NR);
+
                 auto& max_per_chunk = max_per_chunk_threaded[t];
                 auto& num_per_chunk = num_per_chunk_threaded[t];
 
@@ -232,10 +261,10 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
             }, NC, nthreads);
         }
 
-        std::vector<std::vector<Category> > max_per_chunk(nchunks);
-        std::vector<std::vector<IndexIn_> > num_per_chunk(nchunks);
+        auto max_per_chunk = tatami::create_container_of_Index_size<std::vector<std::vector<Category> > >(nchunks);
+        auto num_per_chunk = tatami::create_container_of_Index_size<std::vector<std::vector<IndexIn_> > >(nchunks);
 
-        for (size_t chunk = 0; chunk < nchunks; ++chunk) {
+        for (decltype(nchunks) chunk = 0; chunk < nchunks; ++chunk) {
             // Assume we have at least one thread!
             max_per_chunk[chunk].swap(max_per_chunk_threaded[0][chunk]);
             num_per_chunk[chunk].swap(num_per_chunk_threaded[0][chunk]);
@@ -264,20 +293,20 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
 
     // Second pass to actually fill the vectors.
     {
-        tatami::parallelize([&](size_t, IndexIn_ start, IndexIn_ length) -> void {
-            std::vector<ValueIn_> dbuffer(length);
-
-            std::vector<std::vector<size_t> > output_positions(nchunks);
-            for (size_t chunk = 0; chunk < nchunks; ++chunk) {
+        tatami::parallelize([&](int, IndexIn_ start, IndexIn_ length) -> void {
+            auto output_positions = tatami::create_container_of_Index_size<std::vector<std::vector<size_t> > >(nchunks);
+            for (decltype(nchunks) chunk = 0; chunk < nchunks; ++chunk) {
                 output_positions[chunk].resize(length);
                 for (IndexIn_ r = 0; r < length; ++r) {
                     output_positions[chunk][r] = get_sparse_ptr(store8, store16, store32, assigned_category, assigned_position, chunk, r + start);
                 }
             }
 
+            auto dbuffer = tatami::create_container_of_Index_size<std::vector<ValueIn_> >(length);
+
             if (mat.sparse()) {
-                std::vector<IndexIn_> ibuffer(length);
-                auto ext = tatami::consecutive_extractor<true>(&mat, false, 0, NC, start, length);
+                auto ibuffer = tatami::create_container_of_Index_size<std::vector<IndexIn_> >(length);
+                auto ext = tatami::consecutive_extractor<true>(mat, false, static_cast<IndexIn_>(0), NC, start, length);
 
                 for (IndexIn_ c = 0; c < NC; ++c) {
                     auto range = ext->fetch(c, dbuffer.data(), ibuffer.data());
@@ -294,7 +323,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
                 }
 
             } else {
-                auto ext = tatami::consecutive_extractor<false>(&mat, false, 0, NC, start, length);
+                auto ext = tatami::consecutive_extractor<false>(mat, false, static_cast<IndexIn_>(0), NC, start, length);
 
                 for (IndexIn_ c = 0; c < NC; ++c) {
                     auto ptr = ext->fetch(c, dbuffer.data());
@@ -330,9 +359,25 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
  */
 
 /**
+ * @brief Options for `convert_to_layered_sparse()`.
+ */
+struct ConvertToLayeredSparseOptions {
+    /**
+     * Chunk size to use for partitioning columns.
+     * This should be a positive integer.
+     */
+    std::size_t chunk_size = sanisizer::cap<std::size_t>(65536);
+
+    /**
+     * Number of threads to use.
+     * This should be a positive integer.
+     */
+    int num_threads = 1;
+};
+
+/**
  * @param mat A `tatami::Matrix` object containing non-negative integers.
- * @param chunk_size Chunk size to use for partitioning columns.
- * @param num_threads Number of threads to use.
+ * @param options Further options.
  *
  * @return A `tatami::Matrix` object containing a layered sparse matrix.
  *
@@ -344,24 +389,20 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
  *
  * This function converts an existing sparse integer matrix into a layered sparse matrix.
  * The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them.
- * We improve the chances of being able to use small types by splitting the matrix columns into contiguous chunks according to `chunk_size`.
- * This ensures that a few large values in a particular row only cause promotion to a larger type for the chunks in which they occur.
+ * We improve the chances of being able to use small types by splitting the matrix columns into contiguous chunks according to `options.chunk_size`.
+ * This ensures that a few large values in a particular row only cause promotion to a larger integer type for the chunks in which they occur.
  *
- * Setting `ColumnIndex_` to the smallest type that can hold `chunk_size - 1` can be used to further reduce memory usage.
- * If `ColumnIndex_` is not able to hold `chunk_size - 1`, `chunk_size` is automatically set to the largest value that is represented by `ColumnIndex_` (plus 1).
+ * Setting `ColumnIndex_` to the smallest type that can hold `options.chunk_size - 1` can be used to further reduce memory usage.
+ * If `ColumnIndex_` is not able to hold `options.chunk_size - 1`, the chunk size is automatically set to the largest value that can be represented by `ColumnIndex_` plus 1.
  * For example, if `ColumnIndex_` was set to an unsigned 8-bit integer, `chunk_size` would be automatically reduced to 256.
  */
-template<typename ValueOut_ = double, typename IndexOut_ = int, typename ColumnIndex_ = uint16_t, typename ValueIn_, typename IndexIn_>
-std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_to_layered_sparse(const tatami::Matrix<ValueIn_, IndexIn_>& mat, IndexIn_ chunk_size = 65536, int num_threads = 1) {
-    size_t max_index = static_cast<size_t>(std::numeric_limits<ColumnIndex_>::max()) + 1;
-    if (static_cast<size_t>(chunk_size) > max_index) {
-        chunk_size = max_index;
-    }
-
+template<typename ValueOut_ = double, typename IndexOut_ = int, typename ColumnIndex_ = std::uint16_t, typename ValueIn_, typename IndexIn_>
+std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_to_layered_sparse(const tatami::Matrix<ValueIn_, IndexIn_>& mat, const ConvertToLayeredSparseOptions& options) {
+    IndexIn_ chunk_size = check_chunk_size<IndexIn_, ColumnIndex_>(options.chunk_size);
     if (mat.prefer_rows()) {
-        return convert_by_row<ColumnIndex_, ValueOut_, IndexOut_>(mat, chunk_size, num_threads);
+        return convert_by_row<ColumnIndex_, ValueOut_, IndexOut_>(mat, chunk_size, options.num_threads);
     } else {
-        return convert_by_column<ColumnIndex_, ValueOut_, IndexOut_>(mat, chunk_size, num_threads);
+        return convert_by_column<ColumnIndex_, ValueOut_, IndexOut_>(mat, chunk_size, options.num_threads);
     }
 }
 
@@ -369,7 +410,17 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_to_layered_sparse
  * @cond
  */
 // Provided for back-compatibility.
-template<typename ValueOut_ = double, typename IndexOut_ = int, typename ColumnIndex_ = uint16_t, typename ValueIn_, typename IndexIn_>
+template<typename ValueOut_ = double, typename IndexOut_ = int, typename ColumnIndex_ = std::uint16_t, typename ValueIn_, typename IndexIn_>
+std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_to_layered_sparse(const tatami::Matrix<ValueIn_, IndexIn_>& mat, IndexIn_ chunk_size = 65536, int num_threads = 1) {
+    return convert_to_layered_sparse(mat, [&]{
+        ConvertToLayeredSparseOptions opt;
+        opt.chunk_size = chunk_size;
+        opt.num_threads = num_threads;
+        return opt;
+    }());
+}
+
+template<typename ValueOut_ = double, typename IndexOut_ = int, typename ColumnIndex_ = std::uint16_t, typename ValueIn_, typename IndexIn_>
 std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_to_layered_sparse(const tatami::Matrix<ValueIn_, IndexIn_>* mat, IndexIn_ chunk_size = 65536, int num_threads = 1) {
     return convert_to_layered_sparse<ValueOut_, IndexOut_, ColumnIndex_, ValueIn_, IndexIn_>(*mat, chunk_size, num_threads);
 }
