@@ -169,7 +169,15 @@ template&lt;typename ValueOut_  = double, typename IndexOut_  = int, typename Co
   </table>
   </dd>
 </dl>
-<p>This function converts an existing sparse integer matrix into a layered sparse matrix. The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them. We improve the chances of being able to use small types by splitting the matrix columns into contiguous chunks according to <code>options.chunk_size</code>. This ensures that a few large values in a particular row only cause promotion to a larger integer type for the chunks in which they occur.</p>
+<p>This function converts an existing sparse matrix of non-negative integers into a layered sparse matrix. The aim is to reduce memory usage by storing each row's data in the smallest unsigned integer type that can hold them. To create a layered sparse matrix:</p>
+<ol type="1">
+<li>We split the input matrix into chunks of <code>options.chunk_size</code> contiguous columns.</li>
+<li>Within each chunk, we identify the maximum integer for each row.</li>
+<li>Data for each row are stored in one of three sparse matrices using 8, 16, or 32-bit unsigned integers as the data type, depending on the row's maximum value.</li>
+<li>The three sparse matrices are combined together with <code><a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1DelayedBind.html">tatami::DelayedBind</a></code>, with some use of <code><a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1DelayedSubset.html">tatami::DelayedSubset</a></code> to restore the original order of rows.</li>
+<li>Each chunk is then combined together with <code><a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1DelayedBind.html">tatami::DelayedBind</a></code>.</li>
+</ol>
+<p>We improve the chances of being able to use small types by splitting the matrix columns into chunks. This ensures that a few large values in a particular row only cause promotion to a larger integer type for the chunks in which they occur.</p>
 <p>Setting <code>ColumnIndex_</code> to the smallest type that can hold <code>options.chunk_size - 1</code> can be used to further reduce memory usage. If <code>ColumnIndex_</code> is not able to hold <code>options.chunk_size - 1</code>, the chunk size is automatically set to the largest value that can be represented by <code>ColumnIndex_</code> plus 1. For example, if <code>ColumnIndex_</code> was set to an unsigned 8-bit integer, <code>chunk_size</code> would be automatically reduced to 256. </p>
 
 </div>
@@ -237,8 +245,7 @@ template&lt;typename Value_  = double, typename Index_  = int, typename ColumnIn
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">filepath</td><td>Path to a (possibly Gzip-compressed) Matrix Market file. </td></tr>
-    <tr><td class="paramname">chunk_size</td><td>Chunk size to use for partitioning columns. </td></tr>
-    <tr><td class="paramname">buffer_size</td><td>Size of the buffer (in bytes) to use when reading from file.</td></tr>
+    <tr><td class="paramname">options</td><td>Further options.</td></tr>
   </table>
   </dd>
 </dl>
@@ -278,8 +285,7 @@ template&lt;typename Value_  = double, typename Index_  = int, typename ColumnIn
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">filepath</td><td>Path to a Gzip-compressed Matrix Market file. </td></tr>
-    <tr><td class="paramname">chunk_size</td><td>Chunk size to use for partitioning columns. </td></tr>
-    <tr><td class="paramname">buffer_size</td><td>Size of the buffer (in bytes) to use when reading from file.</td></tr>
+    <tr><td class="paramname">options</td><td>Further options.</td></tr>
   </table>
   </dd>
 </dl>
@@ -325,7 +331,7 @@ template&lt;typename Value_  = double, typename Index_  = int, typename ColumnIn
   <table class="params">
     <tr><td class="paramname">contents</td><td>Array containing the contents of an uncompressed Matrix Market text file. </td></tr>
     <tr><td class="paramname">length</td><td>Length of the array. </td></tr>
-    <tr><td class="paramname">chunk_size</td><td>Chunk size to use for partitioning columns.</td></tr>
+    <tr><td class="paramname">options</td><td>Further options.</td></tr>
   </table>
   </dd>
 </dl>
@@ -371,8 +377,7 @@ template&lt;typename Value_  = double, typename Index_  = int, typename ColumnIn
   <table class="params">
     <tr><td class="paramname">contents</td><td>Array containing the contents of a (possibly Gzip/Zlib-compressed) Matrix Market file. </td></tr>
     <tr><td class="paramname">length</td><td>Length of the array. </td></tr>
-    <tr><td class="paramname">chunk_size</td><td>Chunk size to use for partitioning columns. </td></tr>
-    <tr><td class="paramname">buffer_size</td><td>Size of the buffer to use for decompression, in bytes.</td></tr>
+    <tr><td class="paramname">options</td><td>Further options.</td></tr>
   </table>
   </dd>
 </dl>
@@ -418,8 +423,7 @@ template&lt;typename Value_  = double, typename Index_  = int, typename ColumnIn
   <table class="params">
     <tr><td class="paramname">contents</td><td>Array containing the contents of a Gzip/Zlib-compressed Matrix Market file. </td></tr>
     <tr><td class="paramname">length</td><td>Length of the array. </td></tr>
-    <tr><td class="paramname">chunk_size</td><td>Chunk size to use for partitioning columns. </td></tr>
-    <tr><td class="paramname">buffer_size</td><td>Size of the buffer to use for decompression, in bytes.</td></tr>
+    <tr><td class="paramname">options</td><td>Further options.</td></tr>
   </table>
   </dd>
 </dl>
