@@ -12,10 +12,7 @@ include(GoogleTest)
 include(CheckIncludeFiles)
 check_include_files(filesystem HAVE_CXX_FS)
 
-option(DO_CODE_COVERAGE "Enable coverage testing" OFF)
-if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    option(DO_CODE_COVERAGE ON)
-endif()
+option(CODE_COVERAGE "Enable coverage testing")
 
 # Avoid duplicating the target definition depending on whether OpenMP is to be used.
 macro(create_libtest target)
@@ -39,7 +36,7 @@ macro(create_libtest target)
       target_link_libraries(${target} stdc++fs)
   endif()
 
-  if(DO_CODE_COVERAGE)
+  if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
       target_compile_options(${target} PRIVATE -O0 -g --coverage)
       target_link_options(${target} PRIVATE --coverage)
   endif()
