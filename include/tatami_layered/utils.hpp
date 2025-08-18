@@ -4,36 +4,46 @@
 #include <limits>
 #include <vector>
 #include <numeric>
+#include <cstdint>
+#include <cstddef>
 
 #include "tatami/tatami.hpp"
+#include "sanisizer/sanisizer.hpp"
 
 namespace tatami_layered {
 
 enum class Category : unsigned char { U8, U16, U32 };
 
-template<typename T>
-Category categorize(T v) {
-    constexpr uint8_t max8 = std::numeric_limits<uint8_t>::max();
-    constexpr uint16_t max16 = std::numeric_limits<uint16_t>::max();
-    constexpr T maxv = std::numeric_limits<T>::max();
+template<typename Value_>
+Category categorize(Value_ v) {
+    if (v < 0) {
+        throw std::runtime_error("cannot categorize negative value in a layered matrix");
+    }
 
-    if constexpr(maxv <= max8) {
-        return Category::U8;
+    constexpr std::uint32_t max32 = std::numeric_limits<std::uint32_t>::max();
+    if constexpr(std::is_floating_point<Value_>::value) {
+        if (v > static_cast<double>(max32)) {
+            throw std::runtime_error("floating-point value is outside of the range of a 32-bit unsigned integer");
+        }
+        return categorize<std::uint32_t>(v);
+
     } else {
-        if (v <= max8) {
+        constexpr std::uint8_t max8 = std::numeric_limits<std::uint8_t>::max();
+        if (sanisizer::is_less_than_or_equal(v, max8)) {
             return Category::U8;
         }
-    }
 
-    if constexpr(maxv <= max16) {
-        return Category::U16;
-    } else {
-        if (v <= max16) {
+        constexpr std::uint16_t max16 = std::numeric_limits<std::uint16_t>::max();
+        if (sanisizer::is_less_than_or_equal(v, max16)) {
             return Category::U16;
         }
-    }
 
-    return Category::U32;
+        if (sanisizer::is_greater_than(v, max32)) {
+            throw std::runtime_error("integer value is outside of the range of a 32-bit unsigned integer");
+        }
+
+        return Category::U32;
+    }
 }
 
 template<typename Int_, typename Index_, typename ColIndex_>
@@ -41,11 +51,11 @@ struct Holder {
     Holder() : ptr(1) {}
     std::vector<ColIndex_> index;
     std::vector<Int_> value;
-    std::vector<size_t> ptr;
+    std::vector<std::size_t> ptr;
 
     void fill() {
-        index.resize(ptr.back());
-        value.resize(ptr.back());
+        index.resize(sanisizer::cast<decltype(index.size())>(ptr.back()));
+        value.resize(sanisizer::cast<decltype(index.size())>(ptr.back()));
     }
 };
 
@@ -56,45 +66,44 @@ void allocate_rows(
     std::vector<std::vector<IndexIn_> >& identities8,
     std::vector<std::vector<IndexIn_> >& identities16,
     std::vector<std::vector<IndexIn_> >& identities32,
-    std::vector<Holder<uint8_t, IndexIn_, ColIndex_> >& store8,
-    std::vector<Holder<uint16_t, IndexIn_, ColIndex_> >& store16,
-    std::vector<Holder<uint32_t, IndexIn_, ColIndex_> >& store32,
+    std::vector<Holder<std::uint8_t, IndexIn_, ColIndex_> >& store8,
+    std::vector<Holder<std::uint16_t, IndexIn_, ColIndex_> >& store16,
+    std::vector<Holder<std::uint32_t, IndexIn_, ColIndex_> >& store32,
     std::vector<std::vector<Category> >& assigned_category,
     std::vector<std::vector<IndexIn_> >& assigned_position)
 {
-    size_t num_chunks = max_per_chunk.size();
-
-    for (size_t chunk = 0; chunk < num_chunks; ++chunk) {
+    IndexIn_ num_chunks = max_per_chunk.size();
+    for (decltype(num_chunks) chunk = 0; chunk < num_chunks; ++chunk) {
         IndexIn_ counter8 = 0, counter16 = 0, counter32 = 0;
         const auto& current_max = max_per_chunk[chunk];
         const auto& current_num = num_per_chunk[chunk];
         IndexIn_ NR = current_max.size();
 
         auto& asscat = assigned_category[chunk];
-        asscat.resize(NR);
+        tatami::resize_container_to_Index_size<decltype(asscat)>(asscat, NR);
         auto& asspos = assigned_position[chunk];
-        asspos.resize(NR);
+        tatami::resize_container_to_Index_size<decltype(asspos)>(asspos, NR);
 
-        for (IndexIn_ r = 0; r < NR; ++r) {
+        for (decltype(NR) r = 0; r < NR; ++r) {
             auto cat = current_max[r];
             auto num = current_num[r];
             IndexIn_ counter;
 
             switch(current_max[r]) {
                 case Category::U8:
-                    store8[chunk].ptr.push_back(store8[chunk].ptr.back() + num);
+                    store8[chunk].ptr.push_back(sanisizer::sum<std::size_t>(store8[chunk].ptr.back(), num));
                     counter = counter8++;
                     identities8[chunk].push_back(r);
                     break;
 
                 case Category::U16:
-                    store16[chunk].ptr.push_back(store16[chunk].ptr.back() + num);
+                    store16[chunk].ptr.push_back(sanisizer::sum<std::size_t>(store16[chunk].ptr.back(), num));
                     counter = counter16++;
                     identities16[chunk].push_back(r);
                     break;
 
                 case Category::U32:
-                    store32[chunk].ptr.push_back(store32[chunk].ptr.back() + num);
+                    store32[chunk].ptr.push_back(sanisizer::sum<std::size_t>(store32[chunk].ptr.back(), num));
                     counter = counter32++;
                     identities32[chunk].push_back(r);
                     break;
@@ -111,13 +120,13 @@ void allocate_rows(
 }
 
 template<typename IndexIn_, typename ColIndex_> 
-size_t get_sparse_ptr(
-    const std::vector<Holder<uint8_t, IndexIn_, ColIndex_> >& store8,
-    const std::vector<Holder<uint16_t, IndexIn_, ColIndex_> >& store16,
-    const std::vector<Holder<uint32_t, IndexIn_, ColIndex_> >& store32,
+std::size_t get_sparse_ptr(
+    const std::vector<Holder< std::uint8_t, IndexIn_, ColIndex_> >& store8,
+    const std::vector<Holder<std::uint16_t, IndexIn_, ColIndex_> >& store16,
+    const std::vector<Holder<std::uint32_t, IndexIn_, ColIndex_> >& store32,
     const std::vector<std::vector<Category> >& assigned_category,
     const std::vector<std::vector<IndexIn_> >& assigned_position,
-    size_t chunk,
+    IndexIn_ chunk,
     IndexIn_ row)
 {
     auto arow = assigned_position[chunk][row];
@@ -134,14 +143,14 @@ size_t get_sparse_ptr(
 
 template<typename IndexIn_, typename ColIndex_, typename ValueIn_>
 void fill_sparse_value(
-    std::vector<Holder<uint8_t, IndexIn_, ColIndex_> >& store8,
-    std::vector<Holder<uint16_t, IndexIn_, ColIndex_> >& store16,
-    std::vector<Holder<uint32_t, IndexIn_, ColIndex_> >& store32,
+    std::vector<Holder< std::uint8_t, IndexIn_, ColIndex_> >& store8,
+    std::vector<Holder<std::uint16_t, IndexIn_, ColIndex_> >& store16,
+    std::vector<Holder<std::uint32_t, IndexIn_, ColIndex_> >& store32,
     Category cat,
-    size_t chunk, 
+    IndexIn_ chunk, 
     IndexIn_ col, 
     ValueIn_ val,
-    size_t output_position) 
+    std::size_t output_position) 
 {
     switch (cat) {
         case Category::U8:
@@ -166,48 +175,88 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > consolidate_matrices(
     const std::vector<std::vector<IndexIn_> >& identities8,
     const std::vector<std::vector<IndexIn_> >& identities16,
     const std::vector<std::vector<IndexIn_> >& identities32,
-    std::vector<Holder<uint8_t, IndexIn_, ColIndex_> > store8,
-    std::vector<Holder<uint16_t, IndexIn_, ColIndex_> > store16,
-    std::vector<Holder<uint32_t, IndexIn_, ColIndex_> > store32,
+    std::vector<Holder< std::uint8_t, IndexIn_, ColIndex_> > store8,
+    std::vector<Holder<std::uint16_t, IndexIn_, ColIndex_> > store16,
+    std::vector<Holder<std::uint32_t, IndexIn_, ColIndex_> > store32,
     IndexIn_ NR,
     IndexIn_ chunk_size,
-    size_t leftovers)
+    IndexIn_ leftovers)
 {
-    std::vector<std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > > col_combined;
-    size_t num_chunks = identities8.size();
+    std::vector<std::shared_ptr<const tatami::Matrix<ValueOut_, IndexOut_> > > col_combined;
+    IndexIn_ num_chunks = identities8.size();
     col_combined.reserve(num_chunks);
 
-    for (size_t c = 0; c < num_chunks; ++c) {
-        std::vector<std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > > row_combined;
+    for (decltype(num_chunks) c = 0; c < num_chunks; ++c) {
+        std::vector<std::shared_ptr<const tatami::Matrix<ValueOut_, IndexOut_> > > row_combined;
         IndexOut_ current_size = (c + 1 == num_chunks ? leftovers : chunk_size);
         row_combined.reserve(3);
 
-        row_combined.emplace_back(new tatami::CompressedSparseRowMatrix<ValueOut_, IndexOut_, std::vector<uint8_t>, std::vector<ColIndex_> >(
-            identities8[c].size(), current_size, std::move(store8[c].value), std::move(store8[c].index), std::move(store8[c].ptr), false
-        ));
-        row_combined.emplace_back(new tatami::CompressedSparseRowMatrix<ValueOut_, IndexOut_, std::vector<uint16_t>, std::vector<ColIndex_> >(
-            identities16[c].size(), current_size, std::move(store16[c].value), std::move(store16[c].index), std::move(store16[c].ptr), false
-        ));
-        row_combined.emplace_back(new tatami::CompressedSparseRowMatrix<ValueOut_, IndexOut_, std::vector<uint32_t>, std::vector<ColIndex_> >(
-            identities32[c].size(), current_size, std::move(store32[c].value), std::move(store32[c].index), std::move(store32[c].ptr), false
-        ));
-
         std::vector<IndexIn_> reordered(NR);
         IndexIn_ counter = 0;
-        for (auto& i : identities8[c]) {
-            reordered[i] = counter++;
-        }
-        for (auto& i : identities16[c]) {
-            reordered[i] = counter++;
-        }
-        for (auto& i : identities32[c]) {
-            reordered[i] = counter++;
+
+        if (!(identities8[c].empty())) {
+            row_combined.emplace_back(new tatami::CompressedSparseRowMatrix<ValueOut_, IndexOut_, std::vector<std::uint8_t>, std::vector<ColIndex_>, std::vector<std::size_t> >(
+                identities8[c].size(), current_size, std::move(store8[c].value), std::move(store8[c].index), std::move(store8[c].ptr), false
+            ));
+            for (auto& i : identities8[c]) {
+                reordered[i] = counter++;
+            }
         }
 
-        col_combined.push_back(tatami::make_DelayedSubset<0>(tatami::make_DelayedBind<0>(std::move(row_combined)), std::move(reordered)));
+        if (!(identities16[c].empty())) {
+            row_combined.emplace_back(new tatami::CompressedSparseRowMatrix<ValueOut_, IndexOut_, std::vector<std::uint16_t>, std::vector<ColIndex_>, std::vector<std::size_t> >(
+                identities16[c].size(), current_size, std::move(store16[c].value), std::move(store16[c].index), std::move(store16[c].ptr), false
+            ));
+            for (auto& i : identities16[c]) {
+                reordered[i] = counter++;
+            }
+        }
+
+        if (!(identities32[c].empty()) || row_combined.empty()) { // make sure that at least one matrix is fed into the DelayedBind.
+            row_combined.emplace_back(new tatami::CompressedSparseRowMatrix<ValueOut_, IndexOut_, std::vector<uint32_t>, std::vector<ColIndex_>, std::vector<std::size_t> >(
+                identities32[c].size(), current_size, std::move(store32[c].value), std::move(store32[c].index), std::move(store32[c].ptr), false
+            ));
+            for (auto& i : identities32[c]) {
+                reordered[i] = counter++;
+            }
+        }
+
+        if (row_combined.size() == 1) {
+            col_combined.push_back(std::move(row_combined.front()));
+        } else {
+            col_combined.push_back(
+                tatami::make_DelayedSubset<ValueOut_, IndexOut_>(
+                    std::make_shared<const tatami::DelayedBind<ValueOut_, IndexOut_> >(std::move(row_combined), true),
+                    std::move(reordered),
+                    true
+                )
+            );
+        }
     }
 
-    return tatami::make_DelayedBind<1>(std::move(col_combined));
+    return std::make_shared<tatami::DelayedBind<ValueOut_, IndexOut_> >(std::move(col_combined), false);
+}
+
+template<typename Value_>
+Value_ atleastone(Value_ val) {
+    if (val == 0) {
+        return 1;
+    } else {
+        return val;
+    }
+}
+
+template<typename Output_, typename ColumnIndex_, typename Input_>
+Output_ check_chunk_size(Input_ chunk_size) {
+    if (chunk_size <= 0) {
+        throw std::runtime_error("chunk size should be positive");
+    }
+    constexpr auto max_index = std::numeric_limits<ColumnIndex_>::max();
+    if (sanisizer::is_greater_than(chunk_size - 1, max_index)) { // same as chunk_size > max_index + 1 but this way avoids any risk of integer overflow.
+        return sanisizer::sum<Output_>(max_index, 1);
+    } else {
+        return sanisizer::cast<Output_>(chunk_size);
+    }
 }
 
 }

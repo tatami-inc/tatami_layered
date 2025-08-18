@@ -14,11 +14,13 @@ option(TATAMI_LAYERED_FETCH_EXTERN "Automatically fetch tatami_layered's externa
 if(TATAMI_LAYERED_FETCH_EXTERN)
     add_subdirectory(extern)
 else()
-    find_package(tatami_tatami CONFIG REQUIRED)
-    find_package(tatami_eminem CONFIG REQUIRED)
+    find_package(tatami_tatami 4.0.0 CONFIG REQUIRED)
+    find_package(tatami_eminem 1.2.0 CONFIG REQUIRED)
+    find_package(ltla_byteme 2.0.0 CONFIG REQUIRED)
+    find_package(ltla_sanisizer 0.1.0 CONFIG REQUIRED)
 endif()
 
-target_link_libraries(tatami_layered INTERFACE tatami::tatami tatami::eminem)
+target_link_libraries(tatami_layered INTERFACE tatami::tatami tatami::eminem ltla::byteme ltla::sanisizer)
 
 # Switch between include directories depending on whether the downstream is
 # using the build directly or is using the installed package.

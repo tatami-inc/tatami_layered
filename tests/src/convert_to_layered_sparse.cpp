@@ -32,6 +32,9 @@ TEST_P(ConvertToLayeredSparseTest, FromCSC) {
     auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, std::move(vals), std::move(rows), std::move(indptrs))); 
 
     auto out = tatami_layered::convert_to_layered_sparse(ref.get());
+    EXPECT_TRUE(out->is_sparse());
+    EXPECT_TRUE(out->prefer_rows());
+
     tatami_test::test_simple_row_access(*out, *ref);
     tatami_test::test_simple_column_access(*out, *ref);
 }
@@ -44,6 +47,9 @@ TEST_P(ConvertToLayeredSparseTest, FromCSR) {
     auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, std::move(vals), std::move(cols), std::move(indptrs)));
 
     auto out = tatami_layered::convert_to_layered_sparse(ref.get());
+    EXPECT_TRUE(out->is_sparse());
+    EXPECT_TRUE(out->prefer_rows());
+
     tatami_test::test_simple_row_access(*out, *ref);
     tatami_test::test_simple_column_access(*out, *ref);
 }
@@ -59,6 +65,9 @@ TEST_P(ConvertToLayeredSparseTest, FromDenseColumn) {
     auto ref = std::shared_ptr<tatami::NumericMatrix>(new DenseMat(NR, NC, std::move(full)));
 
     auto out = tatami_layered::convert_to_layered_sparse(ref.get());
+    EXPECT_TRUE(out->is_sparse());
+    EXPECT_TRUE(out->prefer_rows());
+
     tatami_test::test_simple_row_access(*out, *ref);
     tatami_test::test_simple_column_access(*out, *ref);
 }
@@ -74,6 +83,9 @@ TEST_P(ConvertToLayeredSparseTest, FromDenseRow) {
     auto ref = std::shared_ptr<tatami::NumericMatrix>(new DenseMat(NR, NC, std::move(full)));
 
     auto out = tatami_layered::convert_to_layered_sparse(ref.get());
+    EXPECT_TRUE(out->is_sparse());
+    EXPECT_TRUE(out->prefer_rows());
+
     tatami_test::test_simple_row_access(*out, *ref);
     tatami_test::test_simple_column_access(*out, *ref);
 }
@@ -133,79 +145,78 @@ INSTANTIATE_TEST_SUITE_P(
     )
 );
 
+/*********************************************/
+
 class ConvertToLayeredSparseHardTest : public ::testing::TestWithParam<std::tuple<int, int> > {};
 
-TEST_P(ConvertToLayeredSparseHardTest, Complex) {
+TEST_P(ConvertToLayeredSparseHardTest, Chunk16) {
     auto param = GetParam();
     size_t NR = std::get<0>(param);
     size_t NC = 1000;
     auto nthreads = std::get<1>(param);
 
+    std::vector<size_t> rows, cols;
+    std::vector<int> vals;
+    mock_layered_sparse_data(NR, NC, rows, cols, vals);
+
+    auto indptrs = tatami::compress_sparse_triplets<false>(NR, NC, vals, rows, cols);
+    typedef tatami::CompressedSparseColumnMatrix<double, int, decltype(vals), decltype(rows), decltype(indptrs)> SparseMat; 
+    auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, std::move(vals), std::move(rows), std::move(indptrs))); 
+
     // Checking against a reference.
     {
-        std::vector<size_t> rows, cols;
-        std::vector<int> vals;
-        mock_layered_sparse_data<false>(NR, NC, rows, cols, vals);
+        auto out = tatami_layered::convert_to_layered_sparse(*ref, 65536, nthreads);
+        EXPECT_TRUE(out->is_sparse());
+        EXPECT_TRUE(out->prefer_rows());
 
-        auto indptrs = tatami::compress_sparse_triplets<false>(NR, NC, vals, rows, cols);
-        typedef tatami::CompressedSparseColumnMatrix<double, int, decltype(vals), decltype(rows), decltype(indptrs)> SparseMat; 
-        auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, std::move(vals), std::move(rows), std::move(indptrs))); 
-
-        auto out = tatami_layered::convert_to_layered_sparse(ref.get(), 65536, nthreads);
         tatami_test::test_simple_row_access(*out, *ref);
         tatami_test::test_simple_column_access(*out, *ref);
     }
 
     // Checking in the other orientation. 
     {
-        std::vector<size_t> rows, cols;
-        std::vector<int> vals;
-        mock_layered_sparse_data<true>(NR, NC, rows, cols, vals);
+        auto cref = tatami::convert_to_compressed_sparse<double, int>(*ref, false, {}); // column-major.
+        auto out = tatami_layered::convert_to_layered_sparse(*cref, 65536, nthreads);
+        EXPECT_TRUE(out->is_sparse());
+        EXPECT_TRUE(out->prefer_rows());
 
-        auto indptrs = tatami::compress_sparse_triplets<true>(NR, NC, vals, rows, cols);
-        typedef tatami::CompressedSparseRowMatrix<double, int, decltype(vals), decltype(cols), decltype(indptrs)> SparseMat; 
-        auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, std::move(vals), std::move(cols), std::move(indptrs))); 
-
-        auto out = tatami_layered::convert_to_layered_sparse(ref.get(), 65536, nthreads);
         tatami_test::test_simple_row_access(*out, *ref);
         tatami_test::test_simple_column_access(*out, *ref);
     }
 }
 
-TEST_P(ConvertToLayeredSparseHardTest, Chunked) {
+TEST_P(ConvertToLayeredSparseHardTest, Chunk8) {
     auto param = GetParam();
     size_t NR = std::get<0>(param);
     size_t NC = 1000;
     auto nthreads = std::get<1>(param);
 
-    // Checking against a reference.
+    std::vector<size_t> rows, cols;
+    std::vector<int> vals;
+    mock_layered_sparse_data(NR, NC, rows, cols, vals);
+
+    auto indptrs = tatami::compress_sparse_triplets<false>(NR, NC, vals, rows, cols);
+    typedef tatami::CompressedSparseColumnMatrix<double, int, decltype(vals), decltype(rows), decltype(indptrs)> SparseMat; 
+    auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, std::move(vals), std::move(rows), std::move(indptrs))); 
+
+    // Using very small integers to encourage chunking. Chunk size
+    // is automatically reduced to the max integer size.
     {
-        std::vector<size_t> rows, cols;
-        std::vector<int> vals;
-        mock_layered_sparse_data<false>(NR, NC, rows, cols, vals);
+        auto out = tatami_layered::convert_to_layered_sparse<double, int, std::uint8_t>(ref.get(), 300, nthreads);
+        EXPECT_TRUE(out->is_sparse());
+        EXPECT_TRUE(out->prefer_rows());
 
-        auto indptrs = tatami::compress_sparse_triplets<false>(NR, NC, vals, rows, cols);
-        typedef tatami::CompressedSparseColumnMatrix<double, int, decltype(vals), decltype(rows), decltype(indptrs)> SparseMat; 
-        auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, std::move(vals), std::move(rows), std::move(indptrs))); 
-
-        // Using very small integers to encourage chunking. Chunk size
-        // is automatically reduced to the max integer size.
-        auto out = tatami_layered::convert_to_layered_sparse<double, int, uint8_t>(ref.get(), 300, nthreads);
         tatami_test::test_simple_row_access(*out, *ref);
         tatami_test::test_simple_column_access(*out, *ref);
     }
 
     // Checking in the other orientation. 
     {
-        std::vector<size_t> rows, cols;
-        std::vector<int> vals;
-        mock_layered_sparse_data<true>(NR, NC, rows, cols, vals);
+        auto cref = tatami::convert_to_compressed_sparse<double, int>(*ref, false, {}); // column-major.
+        auto out = tatami_layered::convert_to_layered_sparse<double, int, std::uint8_t>(ref.get(), 300, nthreads);
+        EXPECT_TRUE(out->is_sparse());
+        EXPECT_TRUE(out->prefer_rows());
 
-        auto indptrs = tatami::compress_sparse_triplets<true>(NR, NC, vals, rows, cols);
-        typedef tatami::CompressedSparseRowMatrix<double, int, decltype(vals), decltype(cols), decltype(indptrs)> SparseMat; 
-        auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, std::move(vals), std::move(cols), std::move(indptrs))); 
-
-        auto out = tatami_layered::convert_to_layered_sparse<double, int, uint8_t>(ref.get(), 300, nthreads);
         tatami_test::test_simple_row_access(*out, *ref);
         tatami_test::test_simple_column_access(*out, *ref);
     }

@@ -23,8 +23,9 @@ macro(create_libtest target)
       ${target}
       src/convert_to_layered_sparse.cpp
       src/read_layered_sparse_from_matrix_market.cpp
+      src/utils.cpp
   )
-  
+
   target_link_libraries(
       ${target}
       tatami_layered
