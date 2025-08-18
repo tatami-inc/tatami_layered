@@ -52,7 +52,7 @@ TEST_P(ReadLayeredSparseFromMatrixMarketBasicTest, Scrambled) {
 
     std::vector<size_t> rows, cols;
     std::vector<int> vals;
-    mock_layered_sparse_data<false>(NR, NC, rows, cols, vals);
+    mock_layered_sparse_data(NR, NC, rows, cols, vals);
 
     auto indptrs = tatami::compress_sparse_triplets<false>(NR, NC, vals, rows, cols);
     typedef tatami::CompressedSparseColumnMatrix<double, int, decltype(vals), decltype(rows), decltype(indptrs)> SparseMat; 
@@ -82,7 +82,7 @@ TEST(ReadLayeredSparseFromMatrixMarket, Real) {
 
     std::vector<size_t> rows, cols;
     std::vector<int> vals;
-    mock_layered_sparse_data<false>(NR, NC, rows, cols, vals);
+    mock_layered_sparse_data(NR, NC, rows, cols, vals);
 
     auto indptrs = tatami::compress_sparse_triplets<false>(NR, NC, vals, rows, cols);
     typedef tatami::CompressedSparseColumnMatrix<double, int, decltype(vals), decltype(rows), decltype(indptrs)> SparseMat; 
@@ -111,7 +111,7 @@ TEST_P(ReadLayeredSparseFromMatrixMarketFormatTest, File) {
 
     std::vector<size_t> rows, cols;
     std::vector<int> vals;
-    mock_layered_sparse_data<false>(NR, NC, rows, cols, vals);
+    mock_layered_sparse_data(NR, NC, rows, cols, vals);
 
     auto indptrs = tatami::compress_sparse_triplets<false>(NR, NC, vals, rows, cols);
     typedef tatami::CompressedSparseColumnMatrix<double, int, decltype(vals), decltype(rows), decltype(indptrs)> SparseMat; 
@@ -150,7 +150,7 @@ TEST_P(ReadLayeredSparseFromMatrixMarketFormatTest, Buffer) {
 
     std::vector<size_t> rows, cols;
     std::vector<int> vals;
-    mock_layered_sparse_data<false>(NR, NC, rows, cols, vals);
+    mock_layered_sparse_data(NR, NC, rows, cols, vals);
 
     auto indptrs = tatami::compress_sparse_triplets<false>(NR, NC, vals, rows, cols);
     typedef tatami::CompressedSparseColumnMatrix<double, int, decltype(vals), decltype(rows), decltype(indptrs)> SparseMat; 

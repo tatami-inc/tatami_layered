@@ -4,9 +4,8 @@
 #include <random>
 #include <vector>
 
-template<bool ByRow>
-void mock_layered_sparse_data(size_t NR, size_t NC, std::vector<size_t>& rows, std::vector<size_t>& cols, std::vector<int>& vals) {
-    std::mt19937_64 rng(ByRow ? NR : NC);
+inline void mock_layered_sparse_data(std::size_t NR, std::size_t NC, std::vector<std::size_t>& rows, std::vector<std::size_t>& cols, std::vector<int>& vals) {
+    std::mt19937_64 rng(NR * NC + 1);
 
     // This idea is to always have some values in all categories;
     // we wouldn't get this if we uniformly sampled.
@@ -26,42 +25,32 @@ void mock_layered_sparse_data(size_t NR, size_t NC, std::vector<size_t>& rows, s
         return rng() % upper;
     };
 
-    auto secondary_dim = (ByRow ? NC : NR);
-    std::vector<unsigned char> present(secondary_dim);
-    auto choose = [&](auto& primary_store, auto& secondary_store, int primary_index) -> void {
+    std::vector<unsigned char> present(NC);
+    for (decltype(NR) r = 0; r < NR; ++r) {
+        auto original = cols.size();
+
         // This averages out to around about two values per row. This gives
         // us something interesting w.r.t. multiple values at different limits
         // (e.g., about 1/9th of the rows will have both values at the lowest limit).
-        size_t number = (rng() % 3) + 1; 
+        std::size_t number = (rng() % 3) + 1; 
 
-        size_t original = secondary_store.size();
-        for (size_t i = 0; i < number; ++i) {
-            size_t candidate;
+        for (decltype(number) i = 0; i < number; ++i) {
+            std::size_t candidate;
             do {
-                candidate = rng() % secondary_dim;
+                candidate = rng() % NC;
             } while (present[candidate]);
             present[candidate] = 1;
 
-            secondary_store.push_back(candidate);
-            primary_store.push_back(primary_index);
+            cols.push_back(candidate);
+            rows.push_back(r);
             vals.push_back(rand());
         }
 
-        std::sort(secondary_store.begin() + original, secondary_store.end());
+        std::sort(cols.begin() + original, cols.end());
         for (size_t i = 0; i < number; ++i) {
-            present[secondary_store[original + i]] = 0;
+            present[cols[original + i]] = 0;
         } 
         return;
-    };
-
-    if constexpr(!ByRow) {
-        for (size_t c = 0; c < NC; ++c) {
-            choose(cols, rows, c);
-        }
-    } else {
-        for (size_t r = 0; r < NR; ++r) {
-            choose(rows, cols, r);
-        }
     }
 
     return;
