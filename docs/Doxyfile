@@ -2143,7 +2143,7 @@ TAGFILES               = tatami.tag=https://tatami-inc.github.io/tatami
 # tag file that is based on the input files it reads. See section "Linking to
 # external documentation" for more information about the usage of tag files.
 
-GENERATE_TAGFILE       = html/tatami_hdf5.tag
+GENERATE_TAGFILE       = html/tatami_layered.tag
 
 # If the ALLEXTERNALS tag is set to YES, all external class will be listed in
 # the class index. If set to NO, only the inherited external classes will be

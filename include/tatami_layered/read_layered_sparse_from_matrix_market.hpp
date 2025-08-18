@@ -188,12 +188,12 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
  */
 struct ReadLayeredSparseFromMatrixMarketOptions {
     /**
-     * Chunk size to use for partitioning columns.
+     * Chunk size to use for partitioning columns in the layered matrix, see `convert_to_layered_sparse()` for details.
      */
     std::size_t chunk_size = sanisizer::cap<std::size_t>(65536);
 
     /**
-     * Size of the buffer (in bytes) to use when reading from file.
+     * Size of the buffer (in bytes) to use when reading from file and/or decompressing a buffer.
      */
     std::size_t buffer_size = sanisizer::cap<std::size_t>(65536);
 
@@ -253,8 +253,7 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
 
 /**
  * @param filepath Path to a (possibly Gzip-compressed) Matrix Market file.
- * @param chunk_size Chunk size to use for partitioning columns.
- * @param buffer_size Size of the buffer (in bytes) to use when reading from file.
+ * @param options Further options.
  * 
  * @return A `tatami::Matrix` object containing a layered sparse matrix.
  *
@@ -283,8 +282,7 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
 
 /**
  * @param filepath Path to a Gzip-compressed Matrix Market file.
- * @param chunk_size Chunk size to use for partitioning columns.
- * @param buffer_size Size of the buffer (in bytes) to use when reading from file.
+ * @param options Further options.
  * 
  * @return A `tatami::Matrix` object containing a layered sparse matrix.
  *
@@ -344,7 +342,7 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
 /**
  * @param contents Array containing the contents of an uncompressed Matrix Market text file.
  * @param length Length of the array.
- * @param chunk_size Chunk size to use for partitioning columns.
+ * @param options Further options.
  * 
  * @return A `tatami::Matrix` object containing a layered sparse matrix.
  *
@@ -393,8 +391,7 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
 /**
  * @param contents Array containing the contents of a (possibly Gzip/Zlib-compressed) Matrix Market file.
  * @param length Length of the array.
- * @param chunk_size Chunk size to use for partitioning columns.
- * @param buffer_size Size of the buffer to use for decompression, in bytes.
+ * @param options Further options.
  * 
  * @return A `tatami::Matrix` object containing a layered sparse matrix.
  *
@@ -428,8 +425,7 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
 /**
  * @param contents Array containing the contents of a Gzip/Zlib-compressed Matrix Market file.
  * @param length Length of the array.
- * @param chunk_size Chunk size to use for partitioning columns.
- * @param buffer_size Size of the buffer to use for decompression, in bytes.
+ * @param options Further options.
  * 
  * @return A `tatami::Matrix` object containing a layered sparse matrix.
  *

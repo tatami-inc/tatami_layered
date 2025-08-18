@@ -387,9 +387,17 @@ struct ConvertToLayeredSparseOptions {
  * @tparam ValueIn_ Type of data value for the input.
  * @tparam IndexIn_ Integer type for the row/column indices of the input.
  *
- * This function converts an existing sparse integer matrix into a layered sparse matrix.
- * The aim is to reduce memory usage by storing each gene's counts in the smallest unsigned integer type that can hold them.
- * We improve the chances of being able to use small types by splitting the matrix columns into contiguous chunks according to `options.chunk_size`.
+ * This function converts an existing sparse matrix of non-negative integers into a layered sparse matrix.
+ * The aim is to reduce memory usage by storing each row's data in the smallest unsigned integer type that can hold them.
+ * To create a layered sparse matrix:
+ *
+ * 1. We split the input matrix into chunks of `options.chunk_size` contiguous columns.
+ * 2. Within each chunk, we identify the maximum integer for each row.
+ * 3. Data for each row are stored in one of three sparse matrices using 8, 16, or 32-bit unsigned integers as the data type, depending on the row's maximum value.
+ * 4. The three sparse matrices are combined together with `tatami::DelayedBind`, with some use of `tatami::DelayedSubset` to restore the original order of rows.
+ * 5. Each chunk is then combined together with `tatami::DelayedBind`.
+ *
+ * We improve the chances of being able to use small types by splitting the matrix columns into chunks.
  * This ensures that a few large values in a particular row only cause promotion to a larger integer type for the chunks in which they occur.
  *
  * Setting `ColumnIndex_` to the smallest type that can hold `options.chunk_size - 1` can be used to further reduce memory usage.
