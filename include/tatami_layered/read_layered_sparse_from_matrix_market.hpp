@@ -66,23 +66,22 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
         tatami::cast_Index_to_container_size<std::vector<Index_> >(NR);
         for (auto& x : num_per_chunk) { x.resize(NR); }
 
+        auto handler = [&](Index_ r, Index_ c, Category cat) -> void {
+            auto chunk = (c - 1) / chunk_size;
+            --r;
+            max_per_chunk[chunk][r] = std::max(max_per_chunk[chunk][r], cat);
+            ++num_per_chunk[chunk][r];
+        };
+
         const auto& banner = parser.get_banner();
         if (banner.field == eminem::Field::INTEGER) {
             parser.template scan_integer<std::uint32_t>([&](Index_ r, Index_ c, std::uint32_t val) -> void {
-                auto chunk = (c - 1) / chunk_size;
-                --r;
-                max_per_chunk[chunk][r] = std::max(max_per_chunk[chunk][r], categorize(val));
-                ++num_per_chunk[chunk][r];
+                handler(r, c, categorize(val));
             });
-
         } else if (banner.field == eminem::Field::DOUBLE || banner.field == eminem::Field::REAL) {
             parser.scan_real([&](Index_ r, Index_ c, double val) -> void {
-                auto chunk = (c - 1) / chunk_size;
-                --r;
-                max_per_chunk[chunk][r] = std::max(max_per_chunk[chunk][r], categorize(val));
-                ++num_per_chunk[chunk][r];
+                handler(r, c, categorize(val));
             });
-
         } else {
             throw std::runtime_error("expected a numeric field in the Matrix Market file");
         }
@@ -116,24 +115,23 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
         byteme::PerByteSerial<char, decltype(&reader)> pb(&reader);
         eminem::Parser<decltype(&pb), Index_> parser(&pb, eopt);
 
+        auto handler = [&](Index_ r, Index_ c, auto val) -> void {
+            --c;
+            Index_ chunk = c / chunk_size;
+            Index_ offset = c % chunk_size;
+            --r;
+            fill_sparse_value(store8, store16, store32, assigned_category[chunk][r], chunk, offset, val, output_positions[chunk][r]++);
+        };
+
         parser.scan_preamble();
         const auto& banner = parser.get_banner();
         if (banner.field == eminem::Field::INTEGER) {
             parser.template scan_integer<std::uint32_t>([&](Index_ r, Index_ c, std::uint32_t val) -> void {
-                --c;
-                Index_ chunk = c / chunk_size;
-                Index_ offset = c % chunk_size;
-                --r;
-                fill_sparse_value(store8, store16, store32, assigned_category[chunk][r], chunk, offset, val, output_positions[chunk][r]++);
+                handler(r, c, val);
             });
-
         } else if (banner.field == eminem::Field::DOUBLE || banner.field == eminem::Field::REAL) {
             parser.scan_real([&](Index_ r, Index_ c, double val) -> void {
-                --c;
-                Index_ chunk = c / chunk_size;
-                Index_ offset = c % chunk_size;
-                --r;
-                fill_sparse_value(store8, store16, store32, assigned_category[chunk][r], chunk, offset, val, output_positions[chunk][r]++);
+                handler(r, c, val);
             });
         }
 
