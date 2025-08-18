@@ -237,7 +237,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
             }, NC, nthreads);
 
         } else {
-            tatami::parallelize([&](size_t t, IndexIn_ start, IndexIn_ length) -> void {
+            tatami::parallelize([&](int t, IndexIn_ start, IndexIn_ length) -> void {
                 auto ext = tatami::consecutive_extractor<false>(&mat, false, start, length);
                 auto dbuffer = tatami::create_container_of_Index_size<std::vector<ValueIn_> >(NR);
 
@@ -294,7 +294,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
     // Second pass to actually fill the vectors.
     {
         tatami::parallelize([&](int, IndexIn_ start, IndexIn_ length) -> void {
-            auto output_positions = tatami::create_container_of_Index_size<std::vector<std::vector<size_t> > >(nchunks);
+            auto output_positions = tatami::create_container_of_Index_size<std::vector<std::vector<std::size_t> > >(nchunks);
             for (decltype(nchunks) chunk = 0; chunk < nchunks; ++chunk) {
                 output_positions[chunk].resize(length);
                 for (IndexIn_ r = 0; r < length; ++r) {

@@ -59,8 +59,10 @@ TEST_P(ReadLayeredSparseFromMatrixMarketBasicTest, Scrambled) {
     auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, vals, rows, indptrs)); 
 
     auto path = temp_file_path("tatami-tests-ext-MatrixMarket");
-    std::ofstream file_out(path);
-    write_matrix_market(file_out, NR, NC, vals, rows, cols, scrambled, true);
+    {
+        std::ofstream file_out(path);
+        write_matrix_market(file_out, NR, NC, vals, rows, cols, scrambled, true);
+    }
 
     auto out = tatami_layered::read_layered_sparse_from_matrix_market_text_file(path.c_str());
     tatami_test::test_simple_row_access(*out, *ref);
@@ -87,8 +89,10 @@ TEST(ReadLayeredSparseFromMatrixMarket, Real) {
     auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, vals, rows, indptrs)); 
 
     auto path = temp_file_path("tatami-tests-ext-MatrixMarket");
-    std::ofstream file_out(path);
-    write_matrix_market(file_out, NR, NC, vals, rows, cols, /* scrambled = */ false, /* integer = */ false);
+    {
+        std::ofstream file_out(path);
+        write_matrix_market(file_out, NR, NC, vals, rows, cols, /* scrambled = */ false, /* integer = */ false);
+    }
 
     auto out = tatami_layered::read_layered_sparse_from_matrix_market_text_file(path.c_str());
     tatami_test::test_simple_row_access(*out, *ref);
