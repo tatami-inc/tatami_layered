@@ -50,7 +50,6 @@ inline void mock_layered_sparse_data(std::size_t NR, std::size_t NC, std::vector
         for (size_t i = 0; i < number; ++i) {
             present[cols[original + i]] = 0;
         } 
-        return;
     }
 
     return;

@@ -22,7 +22,7 @@ static void write_matrix_market(Stream& stream, size_t nr, size_t nc, const U& v
     stream << nr << " " << nc << " " << vals.size();
 
     if (scramble) {
-        std::vector<size_t> reorder(vals.size());
+        std::vector<std::size_t> reorder(vals.size());
         std::iota(reorder.begin(), reorder.end(), 0);
         std::mt19937_64 rng(vals.size() - nr + nc);
         std::shuffle(reorder.begin(), reorder.end(), rng);
@@ -54,15 +54,15 @@ TEST_P(ReadLayeredSparseFromMatrixMarketBasicTest, Scrambled) {
     std::vector<int> vals;
     mock_layered_sparse_data(NR, NC, rows, cols, vals);
 
-    auto indptrs = tatami::compress_sparse_triplets<false>(NR, NC, vals, rows, cols);
-    typedef tatami::CompressedSparseColumnMatrix<double, int, decltype(vals), decltype(rows), decltype(indptrs)> SparseMat; 
-    auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, vals, rows, indptrs)); 
-
     auto path = temp_file_path("tatami-tests-ext-MatrixMarket");
     {
         std::ofstream file_out(path);
         write_matrix_market(file_out, NR, NC, vals, rows, cols, scrambled, true);
     }
+
+    auto indptrs = tatami::compress_sparse_triplets<false>(NR, NC, vals, rows, cols);
+    typedef tatami::CompressedSparseColumnMatrix<double, int, decltype(vals), decltype(rows), decltype(indptrs)> SparseMat; 
+    auto ref = std::shared_ptr<tatami::NumericMatrix>(new SparseMat(NR, NC, vals, rows, indptrs)); 
 
     auto out = tatami_layered::read_layered_sparse_from_matrix_market_text_file(path.c_str());
     tatami_test::test_simple_row_access(*out, *ref);
@@ -97,6 +97,14 @@ TEST(ReadLayeredSparseFromMatrixMarket, Real) {
     auto out = tatami_layered::read_layered_sparse_from_matrix_market_text_file(path.c_str());
     tatami_test::test_simple_row_access(*out, *ref);
     tatami_test::test_simple_column_access(*out, *ref);
+}
+
+
+TEST(ReadLayeredSparseFromMatrixMarket, Pattern) {
+    std::string buffer = "%%MatrixMarket matrix coordinate pattern general\n1 1 0\n";
+    tatami_test::throws_error([&]() -> void { 
+        tatami_layered::read_layered_sparse_from_matrix_market_text_buffer(reinterpret_cast<const unsigned char*>(buffer.data()), buffer.size());
+    }, "numeric field");
 }
 
 /*********************************************/
