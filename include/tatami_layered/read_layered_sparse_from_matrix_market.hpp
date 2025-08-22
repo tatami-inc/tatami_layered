@@ -23,7 +23,7 @@ namespace tatami_layered {
  * @cond
  */
 template<typename Value_, typename Index_, typename ColumnIndex_, class Creator_>
-std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market(Creator_ create, Index_ chunk_size, int num_threads) {
+std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market(Creator_ create, const Index_ chunk_size, const int num_threads) {
     Index_ NR, NC, nchunks, leftovers;
 
     std::vector<Holder< std::uint8_t, Index_, ColumnIndex_> > store8;
@@ -41,7 +41,7 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
     {
         auto reader = create();
         byteme::PerByteSerial<char, byteme::Reader*> pb(&reader);
-        eminem::Parser<decltype(&pb), Index_> parser(&pb, eopt);
+        eminem::Parser<decltype(I(&pb)), Index_> parser(&pb, eopt);
 
         parser.scan_preamble();
         NR = parser.get_nrows();
@@ -68,20 +68,20 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
             tatami::resize_container_to_Index_size(x, NR);
         }
 
-        auto handler = [&](Index_ r, Index_ c, Category cat) -> void {
-            auto chunk = (c - 1) / chunk_size;
-            --r;
-            max_per_chunk[chunk][r] = std::max(max_per_chunk[chunk][r], cat);
-            ++num_per_chunk[chunk][r];
+        auto handler = [&](const Index_ r, const Index_ c, const Category cat) -> void {
+            const auto chunk = (c - 1) / chunk_size;
+            auto& maxcat = max_per_chunk[chunk][r - 1];
+            maxcat = std::max(maxcat, cat);
+            ++num_per_chunk[chunk][r - 1];
         };
 
         const auto& banner = parser.get_banner();
         if (banner.field == eminem::Field::INTEGER) {
-            parser.template scan_integer<std::uint32_t>([&](Index_ r, Index_ c, std::uint32_t val) -> void {
+            parser.template scan_integer<std::uint32_t>([&](const Index_ r, const Index_ c, const std::uint32_t val) -> void {
                 handler(r, c, categorize(val));
             });
         } else if (banner.field == eminem::Field::DOUBLE || banner.field == eminem::Field::REAL) {
-            parser.scan_real([&](Index_ r, Index_ c, double val) -> void {
+            parser.scan_real([&](const Index_ r, const Index_ c, const double val) -> void {
                 handler(r, c, categorize(val));
             });
         } else {
@@ -105,22 +105,21 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
     // Now allocating.
     {
         std::vector<std::vector<std::size_t> > output_positions(nchunks);
-        tatami::cast_Index_to_container_size<decltype(output_positions.front())>(NR); // check that resize is safe.
-        for (decltype(nchunks) chunk = 0; chunk < nchunks; ++chunk) {
-            output_positions[chunk].resize(NR);
-            for (decltype(NR) r = 0; r < NR; ++r) {
+        for (decltype(I(nchunks)) chunk = 0; chunk < nchunks; ++chunk) {
+            tatami::resize_container_to_Index_size(output_positions[chunk], NR);
+            for (decltype(I(NR)) r = 0; r < NR; ++r) {
                 output_positions[chunk][r] = get_sparse_ptr(store8, store16, store32, assigned_category, assigned_position, chunk, r);
             }
         }
 
         auto reader = create();
-        byteme::PerByteSerial<char, decltype(&reader)> pb(&reader);
-        eminem::Parser<decltype(&pb), Index_> parser(&pb, eopt);
+        byteme::PerByteSerial<char, byteme::Reader*> pb(&reader);
+        eminem::Parser<decltype(I(&pb)), Index_> parser(&pb, eopt);
 
-        auto handler = [&](Index_ r, Index_ c, auto val) -> void {
+        auto handler = [&](Index_ r, Index_ c, const auto val) -> void {
             --c;
-            Index_ chunk = c / chunk_size;
-            Index_ offset = c % chunk_size;
+            const Index_ chunk = c / chunk_size;
+            const Index_ offset = c % chunk_size;
             --r;
             fill_sparse_value(store8, store16, store32, assigned_category[chunk][r], chunk, offset, val, output_positions[chunk][r]++);
         };
@@ -128,24 +127,24 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
         parser.scan_preamble();
         const auto& banner = parser.get_banner();
         if (banner.field == eminem::Field::INTEGER) {
-            parser.template scan_integer<std::uint32_t>([&](Index_ r, Index_ c, std::uint32_t val) -> void {
+            parser.template scan_integer<std::uint32_t>([&](const Index_ r, const Index_ c, const std::uint32_t val) -> void {
                 handler(r, c, val);
             });
         } else if (banner.field == eminem::Field::DOUBLE || banner.field == eminem::Field::REAL) {
-            parser.scan_real([&](Index_ r, Index_ c, double val) -> void {
+            parser.scan_real([&](const Index_ r, const Index_ c, const double val) -> void {
                 handler(r, c, val);
             });
         }
 
         // Checking that the column indices are sorted properly.
         auto sorter = [&](auto& store) -> void {
-            std::vector<std::pair<typename decltype(store[0].index)::value_type, typename decltype(store[0].value)::value_type> > buffer;
+            std::vector<std::pair<decltype(I(store[0].index[0])), decltype(I(store[0].value[0]))> > buffer;
             buffer.reserve(chunk_size);
 
             for (auto& st : store) {
-                auto num_ptr = st.ptr.size();
-                for (decltype(num_ptr) r = 1; r < num_ptr; ++r) {
-                    auto start = st.ptr[r - 1], end = st.ptr[r];
+                const auto num_ptr = st.ptr.size();
+                for (decltype(I(num_ptr)) r = 1; r < num_ptr; ++r) {
+                    const auto start = st.ptr[r - 1], end = st.ptr[r];
 
                     if (!std::is_sorted(st.index.begin() + start, st.index.begin() + end)) {
                         buffer.clear();

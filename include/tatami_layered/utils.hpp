@@ -6,6 +6,7 @@
 #include <numeric>
 #include <cstdint>
 #include <cstddef>
+#include <type_traits>
 
 #include "tatami/tatami.hpp"
 #include "sanisizer/sanisizer.hpp"
@@ -15,7 +16,7 @@ namespace tatami_layered {
 enum class Category : unsigned char { U8, U16, U32 };
 
 template<typename Value_>
-Category categorize(Value_ v) {
+Category categorize(const Value_ v) {
     if (v < 0) {
         throw std::runtime_error("cannot categorize negative value in a layered matrix");
     }
@@ -59,6 +60,11 @@ struct Holder {
     }
 };
 
+template<typename Input_>
+std::remove_cv_t<std::remove_reference_t<Input_> > I(Input_ x) {
+    return x;
+}
+
 template<typename IndexIn_, typename ColIndex_> 
 void allocate_rows(
     const std::vector<std::vector<Category> >& max_per_chunk,
@@ -72,21 +78,21 @@ void allocate_rows(
     std::vector<std::vector<Category> >& assigned_category,
     std::vector<std::vector<IndexIn_> >& assigned_position)
 {
-    IndexIn_ num_chunks = max_per_chunk.size();
-    for (decltype(num_chunks) chunk = 0; chunk < num_chunks; ++chunk) {
+    const IndexIn_ num_chunks = max_per_chunk.size();
+    for (decltype(I(num_chunks)) chunk = 0; chunk < num_chunks; ++chunk) {
         IndexIn_ counter8 = 0, counter16 = 0, counter32 = 0;
         const auto& current_max = max_per_chunk[chunk];
         const auto& current_num = num_per_chunk[chunk];
-        IndexIn_ NR = current_max.size();
+        const IndexIn_ NR = current_max.size();
 
         auto& asscat = assigned_category[chunk];
-        tatami::resize_container_to_Index_size<decltype(asscat)>(asscat, NR);
+        tatami::resize_container_to_Index_size(asscat, NR);
         auto& asspos = assigned_position[chunk];
-        tatami::resize_container_to_Index_size<decltype(asspos)>(asspos, NR);
+        tatami::resize_container_to_Index_size(asspos, NR);
 
-        for (decltype(NR) r = 0; r < NR; ++r) {
-            auto cat = current_max[r];
-            auto num = current_num[r];
+        for (decltype(I(NR)) r = 0; r < NR; ++r) {
+            const auto cat = current_max[r];
+            const auto num = current_num[r];
             IndexIn_ counter;
 
             switch(current_max[r]) {
@@ -126,8 +132,8 @@ std::size_t get_sparse_ptr(
     const std::vector<Holder<std::uint32_t, IndexIn_, ColIndex_> >& store32,
     const std::vector<std::vector<Category> >& assigned_category,
     const std::vector<std::vector<IndexIn_> >& assigned_position,
-    IndexIn_ chunk,
-    IndexIn_ row)
+    const IndexIn_ chunk,
+    const IndexIn_ row)
 {
     auto arow = assigned_position[chunk][row];
     switch (assigned_category[chunk][row]) {
@@ -146,11 +152,11 @@ void fill_sparse_value(
     std::vector<Holder< std::uint8_t, IndexIn_, ColIndex_> >& store8,
     std::vector<Holder<std::uint16_t, IndexIn_, ColIndex_> >& store16,
     std::vector<Holder<std::uint32_t, IndexIn_, ColIndex_> >& store32,
-    Category cat,
-    IndexIn_ chunk, 
-    IndexIn_ col, 
-    ValueIn_ val,
-    std::size_t output_position) 
+    const Category cat,
+    const IndexIn_ chunk, 
+    const IndexIn_ col, 
+    const ValueIn_ val,
+    const std::size_t output_position) 
 {
     switch (cat) {
         case Category::U8:
@@ -178,15 +184,15 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > consolidate_matrices(
     std::vector<Holder< std::uint8_t, IndexIn_, ColIndex_> > store8,
     std::vector<Holder<std::uint16_t, IndexIn_, ColIndex_> > store16,
     std::vector<Holder<std::uint32_t, IndexIn_, ColIndex_> > store32,
-    IndexIn_ NR,
-    IndexIn_ chunk_size,
-    IndexIn_ leftovers)
+    const IndexIn_ NR,
+    const IndexIn_ chunk_size,
+    const IndexIn_ leftovers)
 {
     std::vector<std::shared_ptr<const tatami::Matrix<ValueOut_, IndexOut_> > > col_combined;
     IndexIn_ num_chunks = identities8.size();
     col_combined.reserve(num_chunks);
 
-    for (decltype(num_chunks) c = 0; c < num_chunks; ++c) {
+    for (decltype(I(num_chunks)) c = 0; c < num_chunks; ++c) {
         std::vector<std::shared_ptr<const tatami::Matrix<ValueOut_, IndexOut_> > > row_combined;
         IndexOut_ current_size = (c + 1 == num_chunks ? leftovers : chunk_size);
         row_combined.reserve(3);
@@ -238,7 +244,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > consolidate_matrices(
 }
 
 template<typename Output_, typename ColumnIndex_, typename Input_>
-Output_ check_chunk_size(Input_ chunk_size) {
+Output_ check_chunk_size(const Input_ chunk_size) {
     if (chunk_size <= 0) {
         throw std::runtime_error("chunk size should be positive");
     }
