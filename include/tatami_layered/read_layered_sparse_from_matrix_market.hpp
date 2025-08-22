@@ -47,7 +47,7 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
         NR = parser.get_nrows();
         NC = parser.get_ncols();
         leftovers = NC % chunk_size;
-        nchunks = atleastone(NC / chunk_size + (leftovers != 0));
+        nchunks = sanisizer::max(1, NC / chunk_size + (leftovers != 0));
 
         tatami::resize_container_to_Index_size(store8, nchunks);
         tatami::resize_container_to_Index_size(store16, nchunks);

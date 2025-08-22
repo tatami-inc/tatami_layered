@@ -26,7 +26,7 @@ template<typename ColIndex_, typename ValueOut_ = double, typename IndexOut_ = i
 std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tatami::Matrix<ValueIn_, IndexIn_>& mat, IndexIn_ chunk_size, int nthreads) {
     auto NR = mat.nrow(), NC = mat.ncol();
     IndexIn_ leftovers = NC % chunk_size;
-    IndexIn_ nchunks = atleastone(NC / chunk_size + (leftovers != 0));
+    IndexIn_ nchunks = sanisizer::max(1, NC / chunk_size + (leftovers != 0));
 
     auto store8  = tatami::create_container_of_Index_size<std::vector<Holder< std::uint8_t, IndexOut_, ColIndex_> > >(nchunks);
     auto store16 = tatami::create_container_of_Index_size<std::vector<Holder<std::uint16_t, IndexOut_, ColIndex_> > >(nchunks);
@@ -173,7 +173,7 @@ template<typename ColIndex_, typename ValueOut_ = double, typename IndexOut_ = i
 std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const tatami::Matrix<ValueIn_, IndexIn_>& mat, IndexIn_ chunk_size, int nthreads) {
     auto NR = mat.nrow(), NC = mat.ncol();
     IndexIn_ leftovers = NC % chunk_size;
-    IndexIn_ nchunks = atleastone(NC / chunk_size + (leftovers != 0));
+    IndexIn_ nchunks = sanisizer::max(1, NC / chunk_size + (leftovers != 0));
 
     auto store8  = tatami::create_container_of_Index_size<std::vector<Holder< std::uint8_t, IndexOut_, ColIndex_> > >(nchunks);
     auto store16 = tatami::create_container_of_Index_size<std::vector<Holder<std::uint16_t, IndexOut_, ColIndex_> > >(nchunks);

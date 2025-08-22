@@ -17,7 +17,7 @@ else()
     find_package(tatami_tatami 4.0.0 CONFIG REQUIRED)
     find_package(tatami_eminem 1.2.0 CONFIG REQUIRED)
     find_package(ltla_byteme 2.0.0 CONFIG REQUIRED)
-    find_package(ltla_sanisizer 0.1.0 CONFIG REQUIRED)
+    find_package(ltla_sanisizer 0.1.2 CONFIG REQUIRED)
 endif()
 
 target_link_libraries(tatami_layered INTERFACE tatami::tatami tatami::eminem ltla::byteme ltla::sanisizer)

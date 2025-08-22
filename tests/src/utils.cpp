@@ -2,12 +2,6 @@
 #include "tatami_test/tatami_test.hpp"
 #include "tatami_layered/utils.hpp"
 
-TEST(Utils, AtLeastOne) {
-    EXPECT_EQ(tatami_layered::atleastone(10), 10);
-    EXPECT_EQ(tatami_layered::atleastone(1), 1);
-    EXPECT_EQ(tatami_layered::atleastone(0), 1);
-}
-
 TEST(Utils, Categorize) {
     EXPECT_EQ(tatami_layered::categorize(100), tatami_layered::Category::U8);
     EXPECT_EQ(tatami_layered::categorize(1000), tatami_layered::Category::U16);

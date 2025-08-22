@@ -237,15 +237,6 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > consolidate_matrices(
     return std::make_shared<tatami::DelayedBind<ValueOut_, IndexOut_> >(std::move(col_combined), false);
 }
 
-template<typename Value_>
-Value_ atleastone(Value_ val) {
-    if (val == 0) {
-        return 1;
-    } else {
-        return val;
-    }
-}
-
 template<typename Output_, typename ColumnIndex_, typename Input_>
 Output_ check_chunk_size(Input_ chunk_size) {
     if (chunk_size <= 0) {
