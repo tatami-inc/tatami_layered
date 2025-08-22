@@ -54,8 +54,8 @@ struct Holder {
     std::vector<std::size_t> ptr;
 
     void fill() {
-        index.resize(sanisizer::cast<decltype(index.size())>(ptr.back()));
-        value.resize(sanisizer::cast<decltype(index.size())>(ptr.back()));
+        sanisizer::resize(index, ptr.back());
+        sanisizer::resize(value, ptr.back());
     }
 };
 

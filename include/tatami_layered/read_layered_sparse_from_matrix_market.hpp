@@ -59,12 +59,14 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
         tatami::resize_container_to_Index_size(assigned_category, nchunks);
 
         auto max_per_chunk = tatami::create_container_of_Index_size<std::vector<std::vector<Category> > >(nchunks);
-        tatami::cast_Index_to_container_size<std::vector<Category> >(NR); // check that resize is safe.
-        for (auto& x : max_per_chunk) { x.resize(NR); }
+        for (auto& x : max_per_chunk) {
+            tatami::resize_container_to_Index_size(x, NR);
+        }
 
         auto num_per_chunk = tatami::create_container_of_Index_size<std::vector<std::vector<Index_> > >(nchunks);
-        tatami::cast_Index_to_container_size<std::vector<Index_> >(NR);
-        for (auto& x : num_per_chunk) { x.resize(NR); }
+        for (auto& x : num_per_chunk) {
+            tatami::resize_container_to_Index_size(x, NR);
+        }
 
         auto handler = [&](Index_ r, Index_ c, Category cat) -> void {
             auto chunk = (c - 1) / chunk_size;

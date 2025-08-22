@@ -42,15 +42,13 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
     // First pass to define the allocations.
     {
         auto max_per_chunk = tatami::create_container_of_Index_size<std::vector<std::vector<Category> > >(nchunks);
-        tatami::cast_Index_to_container_size<std::vector<Category> >(NR); // check that the cast within resize() is safe.
         for (auto& x : max_per_chunk) {
-            x.resize(NR);
+            tatami::resize_container_to_Index_size(x, NR);
         }
 
         auto num_per_chunk = tatami::create_container_of_Index_size<std::vector<std::vector<IndexIn_> > >(nchunks);
-        tatami::cast_Index_to_container_size<std::vector<IndexIn_> >(NR);
         for (auto& x : num_per_chunk) {
-            x.resize(NR);
+            tatami::resize_container_to_Index_size(x, NR);
         }
 
         if (mat.sparse()) {
@@ -189,20 +187,18 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
     // First pass to define the allocations.
     {
         auto max_per_chunk_threaded = sanisizer::create<std::vector<std::vector<std::vector<Category> > > >(nthreads);
-        tatami::cast_Index_to_container_size<std::vector<Category> >(NR); // check that the cast within resize() is safe.
         for (auto& max_per_chunk : max_per_chunk_threaded) { 
             tatami::resize_container_to_Index_size<std::vector<std::vector<Category> > >(max_per_chunk, nchunks);
             for (auto& x : max_per_chunk) {
-                x.resize(NR);
+                tatami::resize_container_to_Index_size(x, NR);
             }
         }
 
         auto num_per_chunk_threaded = sanisizer::create<std::vector<std::vector<std::vector<IndexIn_> > > >(nthreads);
-        tatami::cast_Index_to_container_size<std::vector<IndexIn_> >(NR);
         for (auto& num_per_chunk : num_per_chunk_threaded) { 
             tatami::resize_container_to_Index_size<std::vector<std::vector<IndexIn_> > >(num_per_chunk, nchunks);
             for (auto& x : num_per_chunk) {
-                x.resize(NR);
+                tatami::resize_container_to_Index_size(x, NR);
             }
         }
 
