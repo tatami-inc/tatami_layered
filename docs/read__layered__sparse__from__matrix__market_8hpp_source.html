@@ -155,11 +155,11 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>            <a class="code hl_functionRef" href="https://tatami-inc.github.io/tatami/namespacetatami.html#a5c8a6fad0ecaa74e7eb69d50c25c44f8">tatami::resize_container_to_Index_size</a>(x, NR);</div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>        }</div>
 <div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span> </div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>        <span class="keyword">auto</span> handler = [&amp;](Index_ r, Index_ c, <span class="keyword">const</span> Category cat) -&gt; <span class="keywordtype">void</span> {</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>        <span class="keyword">auto</span> handler = [&amp;](<span class="keyword">const</span> Index_ r, <span class="keyword">const</span> Index_ c, <span class="keyword">const</span> Category cat) -&gt; <span class="keywordtype">void</span> {</div>
 <div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>            <span class="keyword">const</span> <span class="keyword">auto</span> chunk = (c - 1) / chunk_size;</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>            --r;</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>            max_per_chunk[chunk][r] = std::max(max_per_chunk[chunk][r], cat);</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>            ++num_per_chunk[chunk][r];</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>            <span class="keyword">auto</span>&amp; maxcat = max_per_chunk[chunk][r - 1];</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>            maxcat = std::max(maxcat, cat);</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>            ++num_per_chunk[chunk][r - 1];</div>
 <div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>        };</div>
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
 <div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>        <span class="keyword">const</span> <span class="keyword">auto</span>&amp; banner = parser.get_banner();</div>
