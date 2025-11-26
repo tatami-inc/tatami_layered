@@ -118,7 +118,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
                 auto ext = tatami::consecutive_extractor<true>(mat, true, start, length);
 
                 for (IndexIn_ r = start, end = start + length; r < end; ++r) {
-                    for (decltype(I(nchunks)) chunk = 0; chunk < nchunks; ++chunk) {
+                    for (I<decltype(nchunks)> chunk = 0; chunk < nchunks; ++chunk) {
                         output_positions[chunk] = get_sparse_ptr(store8, store16, store32, assigned_category, assigned_position, chunk, r);
                     }
 
@@ -136,7 +136,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
                 auto ext = tatami::consecutive_extractor<false>(mat, true, start, length);
 
                 for (IndexIn_ r = start, end = start + length; r < end; ++r) {
-                    for (decltype(I(nchunks)) chunk = 0; chunk < nchunks; ++chunk) {
+                    for (I<decltype(nchunks)> chunk = 0; chunk < nchunks; ++chunk) {
                         output_positions[chunk] = get_sparse_ptr(store8, store16, store32, assigned_category, assigned_position, chunk, r);
                     }
 
@@ -260,7 +260,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
         auto max_per_chunk = tatami::create_container_of_Index_size<std::vector<std::vector<Category> > >(nchunks);
         auto num_per_chunk = tatami::create_container_of_Index_size<std::vector<std::vector<IndexIn_> > >(nchunks);
 
-        for (decltype(I(nchunks)) chunk = 0; chunk < nchunks; ++chunk) {
+        for (I<decltype(nchunks)> chunk = 0; chunk < nchunks; ++chunk) {
             // Assume we have at least one thread!
             max_per_chunk[chunk].swap(max_per_chunk_threaded[0][chunk]);
             num_per_chunk[chunk].swap(num_per_chunk_threaded[0][chunk]);
@@ -291,7 +291,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
     {
         tatami::parallelize([&](const int, const IndexIn_ start, const IndexIn_ length) -> void {
             auto output_positions = tatami::create_container_of_Index_size<std::vector<std::vector<std::size_t> > >(nchunks);
-            for (decltype(I(nchunks)) chunk = 0; chunk < nchunks; ++chunk) {
+            for (I<decltype(nchunks)> chunk = 0; chunk < nchunks; ++chunk) {
                 tatami::resize_container_to_Index_size(output_positions[chunk], length);
                 for (IndexIn_ r = 0; r < length; ++r) {
                     output_positions[chunk][r] = get_sparse_ptr(store8, store16, store32, assigned_category, assigned_position, chunk, r + start);

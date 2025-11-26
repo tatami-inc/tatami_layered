@@ -41,7 +41,7 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
     {
         auto reader = create();
         byteme::PerByteSerial<char, byteme::Reader*> pb(&reader);
-        eminem::Parser<decltype(I(&pb)), Index_> parser(&pb, eopt);
+        eminem::Parser<I<decltype(&pb)>, Index_> parser(&pb, eopt);
 
         parser.scan_preamble();
         NR = parser.get_nrows();
@@ -105,16 +105,16 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
     // Now allocating.
     {
         std::vector<std::vector<std::size_t> > output_positions(nchunks);
-        for (decltype(I(nchunks)) chunk = 0; chunk < nchunks; ++chunk) {
+        for (I<decltype(nchunks)> chunk = 0; chunk < nchunks; ++chunk) {
             tatami::resize_container_to_Index_size(output_positions[chunk], NR);
-            for (decltype(I(NR)) r = 0; r < NR; ++r) {
+            for (I<decltype(NR)> r = 0; r < NR; ++r) {
                 output_positions[chunk][r] = get_sparse_ptr(store8, store16, store32, assigned_category, assigned_position, chunk, r);
             }
         }
 
         auto reader = create();
         byteme::PerByteSerial<char, byteme::Reader*> pb(&reader);
-        eminem::Parser<decltype(I(&pb)), Index_> parser(&pb, eopt);
+        eminem::Parser<I<decltype(&pb)>, Index_> parser(&pb, eopt);
 
         auto handler = [&](Index_ r, Index_ c, const auto val) -> void {
             --c;
@@ -138,12 +138,12 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
 
         // Checking that the column indices are sorted properly.
         auto sorter = [&](auto& store) -> void {
-            std::vector<std::pair<decltype(I(store[0].index[0])), decltype(I(store[0].value[0]))> > buffer;
+            std::vector<std::pair<I<decltype(store[0].index[0])>, I<decltype(store[0].value[0])>> > buffer;
             buffer.reserve(chunk_size);
 
             for (auto& st : store) {
                 const auto num_ptr = st.ptr.size();
-                for (decltype(I(num_ptr)) r = 1; r < num_ptr; ++r) {
+                for (I<decltype(num_ptr)> r = 1; r < num_ptr; ++r) {
                     const auto start = st.ptr[r - 1], end = st.ptr[r];
 
                     if (!std::is_sorted(st.index.begin() + start, st.index.begin() + end)) {

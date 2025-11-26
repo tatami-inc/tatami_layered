@@ -61,9 +61,7 @@ struct Holder {
 };
 
 template<typename Input_>
-std::remove_cv_t<std::remove_reference_t<Input_> > I(Input_ x) {
-    return x;
-}
+using I = std::remove_cv_t<std::remove_reference_t<Input_> >;
 
 template<typename IndexIn_, typename ColIndex_> 
 void allocate_rows(
@@ -79,7 +77,7 @@ void allocate_rows(
     std::vector<std::vector<IndexIn_> >& assigned_position)
 {
     const IndexIn_ num_chunks = max_per_chunk.size();
-    for (decltype(I(num_chunks)) chunk = 0; chunk < num_chunks; ++chunk) {
+    for (I<decltype(num_chunks)> chunk = 0; chunk < num_chunks; ++chunk) {
         IndexIn_ counter8 = 0, counter16 = 0, counter32 = 0;
         const auto& current_max = max_per_chunk[chunk];
         const auto& current_num = num_per_chunk[chunk];
@@ -90,7 +88,7 @@ void allocate_rows(
         auto& asspos = assigned_position[chunk];
         tatami::resize_container_to_Index_size(asspos, NR);
 
-        for (decltype(I(NR)) r = 0; r < NR; ++r) {
+        for (I<decltype(NR)> r = 0; r < NR; ++r) {
             const auto cat = current_max[r];
             const auto num = current_num[r];
             IndexIn_ counter;
@@ -192,7 +190,7 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > consolidate_matrices(
     IndexIn_ num_chunks = identities8.size();
     col_combined.reserve(num_chunks);
 
-    for (decltype(I(num_chunks)) c = 0; c < num_chunks; ++c) {
+    for (I<decltype(num_chunks)> c = 0; c < num_chunks; ++c) {
         std::vector<std::shared_ptr<const tatami::Matrix<ValueOut_, IndexOut_> > > row_combined;
         IndexOut_ current_size = (c + 1 == num_chunks ? leftovers : chunk_size);
         row_combined.reserve(3);
