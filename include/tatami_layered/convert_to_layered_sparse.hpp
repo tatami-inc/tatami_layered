@@ -167,6 +167,42 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_row(const tata
     );
 }
 
+template<typename Value_, typename IndexIn_>
+std::vector<std::vector<Value_> > convert_by_column_allocate_store_per_chunk(const IndexIn_ nchunks, const IndexIn_ NR) {
+    auto output = tatami::create_container_of_Index_size<std::vector<std::vector<Value_> > >(nchunks);
+    for (auto& x : output) {
+        tatami::resize_container_to_Index_size(x, NR);
+    }
+    return output;
+};
+
+template<typename Value_, typename IndexIn_>
+std::vector<std::vector<Value_> >& convert_by_column_get_store_per_chunk(
+    int thread,
+    std::vector<std::vector<Value_> >& base,
+    std::optional<std::vector<std::vector<Value_> > >& tmp,
+    const IndexIn_ nchunks,
+    const IndexIn_ NR
+) {
+    if (thread) {
+        tmp = convert_by_column_allocate_store_per_chunk<Value_>(nchunks, NR);
+        return *tmp;
+    } else {
+        return base;
+    }
+}
+
+template<typename Value_>
+void convert_by_column_save_store_per_chunk(
+    int thread,
+    std::optional<std::vector<std::vector<Value_> > >& tmp,
+    std::vector<std::vector<std::vector<Value_> > >& collected
+) { 
+    if (thread) {
+        collected[thread - 1] = std::move(*tmp);
+    }
+};
+
 template<typename ColIndex_, typename ValueOut_ = double, typename IndexOut_ = int, typename ValueIn_, typename IndexIn_>
 std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const tatami::Matrix<ValueIn_, IndexIn_>& mat, const IndexIn_ chunk_size, const int nthreads) {
     const auto NR = mat.nrow(), NC = mat.ncol();
@@ -186,24 +222,14 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
 
     // First pass to define the allocations.
     {
-        auto max_per_chunk_threaded = sanisizer::create<std::vector<std::vector<std::vector<Category> > > >(nthreads);
-        for (auto& max_per_chunk : max_per_chunk_threaded) { 
-            tatami::resize_container_to_Index_size<std::vector<std::vector<Category> > >(max_per_chunk, nchunks);
-            for (auto& x : max_per_chunk) {
-                tatami::resize_container_to_Index_size(x, NR);
-            }
-        }
-
-        auto num_per_chunk_threaded = sanisizer::create<std::vector<std::vector<std::vector<IndexIn_> > > >(nthreads);
-        for (auto& num_per_chunk : num_per_chunk_threaded) { 
-            tatami::resize_container_to_Index_size<std::vector<std::vector<IndexIn_> > >(num_per_chunk, nchunks);
-            for (auto& x : num_per_chunk) {
-                tatami::resize_container_to_Index_size(x, NR);
-            }
-        }
+        auto max_per_chunk = convert_by_column_allocate_store_per_chunk<Category>(nchunks, NR);
+        auto max_per_chunk_threaded = sanisizer::create<std::vector<std::vector<std::vector<Category> > > >(nthreads - 1);
+        auto num_per_chunk = convert_by_column_allocate_store_per_chunk<IndexIn_>(nchunks, NR);
+        auto num_per_chunk_threaded = sanisizer::create<std::vector<std::vector<std::vector<IndexIn_> > > >(nthreads - 1);
+        int num_used;
 
         if (mat.sparse()) {
-            tatami::parallelize([&](const int t, const IndexIn_ start, const IndexIn_ length) -> void {
+            num_used = tatami::parallelize([&](const int t, const IndexIn_ start, const IndexIn_ length) -> void {
                 auto ext = tatami::consecutive_extractor<true>(mat, false, start, length, [&]{
                     tatami::Options opt;
                     opt.sparse_ordered_index = false;
@@ -212,14 +238,16 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
                 auto dbuffer = tatami::create_container_of_Index_size<std::vector<ValueIn_> >(NR);
                 auto ibuffer = tatami::create_container_of_Index_size<std::vector<IndexIn_> >(NR);
 
-                auto& max_per_chunk = max_per_chunk_threaded[t];
-                auto& num_per_chunk = num_per_chunk_threaded[t];
+                std::optional<std::vector<std::vector<Category> > > max_tmp;
+                auto& cur_max_per_chunk = convert_by_column_get_store_per_chunk(t, max_per_chunk, max_tmp, nchunks, NR);
+                std::optional<std::vector<std::vector<IndexIn_> > > num_tmp;
+                auto& cur_num_per_chunk = convert_by_column_get_store_per_chunk(t, num_per_chunk, num_tmp, nchunks, NR);
 
                 for (IndexIn_ c = start, end = start + length; c < end; ++c) {
                     const auto range = ext->fetch(c, dbuffer.data(), ibuffer.data());
                     const auto chunk = c / chunk_size;
-                    auto& max_vec = max_per_chunk[chunk];
-                    auto& num_vec = num_per_chunk[chunk];
+                    auto& max_vec = cur_max_per_chunk[chunk];
+                    auto& num_vec = cur_num_per_chunk[chunk];
 
                     for (IndexIn_ i = 0; i < range.number; ++i) {
                         if (range.value[i]) {
@@ -230,21 +258,26 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
                         }
                     }
                 }
+
+                convert_by_column_save_store_per_chunk(t, max_tmp, max_per_chunk_threaded);
+                convert_by_column_save_store_per_chunk(t, num_tmp, num_per_chunk_threaded);
             }, NC, nthreads);
 
         } else {
-            tatami::parallelize([&](const int t, const IndexIn_ start, const IndexIn_ length) -> void {
+            num_used = tatami::parallelize([&](const int t, const IndexIn_ start, const IndexIn_ length) -> void {
                 auto ext = tatami::consecutive_extractor<false>(mat, false, start, length);
                 auto dbuffer = tatami::create_container_of_Index_size<std::vector<ValueIn_> >(NR);
 
-                auto& max_per_chunk = max_per_chunk_threaded[t];
-                auto& num_per_chunk = num_per_chunk_threaded[t];
+                std::optional<std::vector<std::vector<Category> > > max_tmp;
+                auto& cur_max_per_chunk = convert_by_column_get_store_per_chunk(t, max_per_chunk, max_tmp, nchunks, NR);
+                std::optional<std::vector<std::vector<IndexIn_> > > num_tmp;
+                auto& cur_num_per_chunk = convert_by_column_get_store_per_chunk(t, num_per_chunk, num_tmp, nchunks, NR);
 
                 for (IndexIn_ c = start, end = start + length; c < end; ++c) {
                     const auto ptr = ext->fetch(c, dbuffer.data());
                     const auto chunk = c / chunk_size;
-                    auto& max_vec = max_per_chunk[chunk];
-                    auto& num_vec = num_per_chunk[chunk];
+                    auto& max_vec = cur_max_per_chunk[chunk];
+                    auto& num_vec = cur_num_per_chunk[chunk];
 
                     for (IndexIn_ r = 0; r < NR; ++r) {
                         if (ptr[r]) {
@@ -254,21 +287,19 @@ std::shared_ptr<tatami::Matrix<ValueOut_, IndexOut_> > convert_by_column(const t
                         }
                     }
                 }
+
+                convert_by_column_save_store_per_chunk(t, max_tmp, max_per_chunk_threaded);
+                convert_by_column_save_store_per_chunk(t, num_tmp, num_per_chunk_threaded);
             }, NC, nthreads);
         }
 
-        auto max_per_chunk = tatami::create_container_of_Index_size<std::vector<std::vector<Category> > >(nchunks);
-        auto num_per_chunk = tatami::create_container_of_Index_size<std::vector<std::vector<IndexIn_> > >(nchunks);
-
-        for (I<decltype(nchunks)> chunk = 0; chunk < nchunks; ++chunk) {
-            // Assume we have at least one thread!
-            max_per_chunk[chunk].swap(max_per_chunk_threaded[0][chunk]);
-            num_per_chunk[chunk].swap(num_per_chunk_threaded[0][chunk]);
-
-            for (int t = 1; t < nthreads; ++t) {
+        for (int t = 1; t < num_used; ++t) {
+            const auto& cur_max_per_chunk = max_per_chunk_threaded[t - 1];
+            const auto& cur_num_per_chunk = num_per_chunk_threaded[t - 1];
+            for (I<decltype(nchunks)> chunk = 0; chunk < nchunks; ++chunk) {
                 for (IndexIn_ r = 0; r < NR; ++r) {
-                    max_per_chunk[chunk][r] = std::max(max_per_chunk[chunk][r], max_per_chunk_threaded[t][chunk][r]);
-                    num_per_chunk[chunk][r] += num_per_chunk_threaded[t][chunk][r];
+                    max_per_chunk[chunk][r] = std::max(max_per_chunk[chunk][r], cur_max_per_chunk[chunk][r]);
+                    num_per_chunk[chunk][r] += cur_num_per_chunk[chunk][r];
                 }
             }
         }
