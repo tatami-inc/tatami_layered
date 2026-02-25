@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(tatami_layered
-    VERSION 2.1.0
+    VERSION 2.1.1
     DESCRIPTION "Create layered tatami matrices"
     LANGUAGES CXX)
 
@@ -14,10 +14,10 @@ option(TATAMI_LAYERED_FETCH_EXTERN "Automatically fetch tatami_layered's externa
 if(TATAMI_LAYERED_FETCH_EXTERN)
     add_subdirectory(extern)
 else()
-    find_package(tatami_tatami 4.0.0 CONFIG REQUIRED)
+    find_package(tatami_tatami 4.1.0 CONFIG REQUIRED)
     find_package(tatami_eminem 1.2.0 CONFIG REQUIRED)
     find_package(ltla_byteme 2.0.0 CONFIG REQUIRED)
-    find_package(ltla_sanisizer 0.1.2 CONFIG REQUIRED)
+    find_package(ltla_sanisizer 0.2.0 CONFIG REQUIRED)
 endif()
 
 target_link_libraries(tatami_layered INTERFACE tatami::tatami tatami::eminem ltla::byteme ltla::sanisizer)
