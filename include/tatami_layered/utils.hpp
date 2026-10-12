@@ -91,7 +91,7 @@ void allocate_rows(
         for (I<decltype(NR)> r = 0; r < NR; ++r) {
             const auto cat = current_max[r];
             const auto num = current_num[r];
-            IndexIn_ counter;
+            IndexIn_ counter = 0; // initialize just to keep GCC happy, this value will be overridden.
 
             switch(current_max[r]) {
                 case Category::U8:
