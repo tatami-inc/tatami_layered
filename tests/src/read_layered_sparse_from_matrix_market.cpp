@@ -109,7 +109,7 @@ TEST(ReadLayeredSparseFromMatrixMarket, Pattern) {
 
 /*********************************************/
 
-class ReadLayeredSparseFromMatrixMarketFormatTest : public ::testing::TestWithParam<int> {
+class ReadLayeredSparseFromMatrixMarketFormatTest : public ::testing::TestWithParam<bool> {
 protected:
     size_t NR = 2000, NC = 1000;
 };
@@ -140,17 +140,23 @@ TEST_P(ReadLayeredSparseFromMatrixMarketFormatTest, File) {
         gzclose(ohandle);
     }
 
-    std::shared_ptr<tatami::NumericMatrix> out;
-    if (compressed == 0) {
-        out = tatami_layered::read_layered_sparse_from_matrix_market_text_file(path.c_str());
-    } else if (compressed == 1) {
-        out = tatami_layered::read_layered_sparse_from_matrix_market_gzip_file(path.c_str());
-    } else if (compressed == 2) {
-        out = tatami_layered::read_layered_sparse_from_matrix_market_some_file(path.c_str());
+    {
+        std::shared_ptr<tatami::NumericMatrix> out;
+        if (compressed) {
+            out = tatami_layered::read_layered_sparse_from_matrix_market_gzip_file(path.c_str());
+        } else {
+            out = tatami_layered::read_layered_sparse_from_matrix_market_text_file(path.c_str());
+        }
+        tatami_test::test_simple_row_access(*out, *ref);
+        tatami_test::test_simple_column_access(*out, *ref);
     }
 
-    tatami_test::test_simple_row_access(*out, *ref);
-    tatami_test::test_simple_column_access(*out, *ref);
+    // The 'some' reader can take either.
+    {
+        auto out = tatami_layered::read_layered_sparse_from_matrix_market_some_file(path.c_str());
+        tatami_test::test_simple_row_access(*out, *ref);
+        tatami_test::test_simple_column_access(*out, *ref);
+    }
 }
 
 TEST_P(ReadLayeredSparseFromMatrixMarketFormatTest, Buffer) {
@@ -180,24 +186,29 @@ TEST_P(ReadLayeredSparseFromMatrixMarketFormatTest, Buffer) {
         contents.insert(contents.end(), std::istream_iterator<unsigned char>{handle}, std::istream_iterator<unsigned char>());
     }
 
-    std::shared_ptr<tatami::NumericMatrix> out;
     auto ptr = reinterpret_cast<const unsigned char*>(contents.data());
     size_t n = contents.size();
-
-    if (compressed == 0) {
-        out = tatami_layered::read_layered_sparse_from_matrix_market_text_buffer(ptr, n);
-    } else if (compressed == 1) {
-        out = tatami_layered::read_layered_sparse_from_matrix_market_zlib_buffer(ptr, n);
-    } else if (compressed == 2) {
-        out = tatami_layered::read_layered_sparse_from_matrix_market_some_buffer(ptr, n);
+    {
+        std::shared_ptr<tatami::NumericMatrix> out;
+        if (compressed) {
+            out = tatami_layered::read_layered_sparse_from_matrix_market_zlib_buffer(ptr, n);
+        } else {
+            out = tatami_layered::read_layered_sparse_from_matrix_market_text_buffer(ptr, n);
+        }
+        tatami_test::test_simple_row_access(*out, *ref);
+        tatami_test::test_simple_column_access(*out, *ref);
     }
 
-    tatami_test::test_simple_row_access(*out, *ref);
-    tatami_test::test_simple_column_access(*out, *ref);
+    // The 'some' reader can take either.
+    {
+        auto out = tatami_layered::read_layered_sparse_from_matrix_market_some_buffer(ptr, n);
+        tatami_test::test_simple_row_access(*out, *ref);
+        tatami_test::test_simple_column_access(*out, *ref);
+    }
 }
 
 INSTANTIATE_TEST_SUITE_P(
     ReadLayeredSparseFromMatrixMarket,
     ReadLayeredSparseFromMatrixMarketFormatTest,
-    ::testing::Values(0, 1, 2)  // Gzipped?
+    ::testing::Values(false, true)  // Gzipped?
 );

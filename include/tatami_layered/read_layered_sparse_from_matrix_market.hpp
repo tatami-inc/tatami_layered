@@ -23,7 +23,7 @@ namespace tatami_layered {
  * @cond
  */
 template<typename Value_, typename Index_, typename ColumnIndex_, class Creator_>
-std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market(Creator_ create, const Index_ chunk_size, const int num_threads) {
+std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market(Creator_ create, const Index_ chunk_size, std::size_t buffer_size, const int num_threads) {
     Index_ NR, NC, nchunks, leftovers;
 
     std::vector<Holder< std::uint8_t, Index_, ColumnIndex_> > store8;
@@ -35,13 +35,12 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
     std::vector<std::vector<Category> > assigned_category;
 
     eminem::ParserOptions eopt;
+    eopt.buffer_size = buffer_size;
     eopt.num_threads = num_threads;
 
     // First pass, scanning for the max and number.
     {
-        auto reader = create();
-        byteme::PerByteSerial<char, byteme::Reader*> pb(&reader);
-        eminem::Parser<I<decltype(&pb)>, Index_> parser(&pb, eopt);
+        eminem::Parser<I<decltype(create())>, Index_> parser(create(), eopt);
 
         parser.scan_preamble();
         NR = parser.get_nrows();
@@ -112,9 +111,7 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
             }
         }
 
-        auto reader = create();
-        byteme::PerByteSerial<char, byteme::Reader*> pb(&reader);
-        eminem::Parser<I<decltype(&pb)>, Index_> parser(&pb, eopt);
+        eminem::Parser<I<decltype(create())>, Index_> parser(create(), eopt);
 
         auto handler = [&](Index_ r, Index_ c, const auto val) -> void {
             --c;
@@ -222,13 +219,10 @@ template<typename Value_ = double, typename Index_ = int, typename ColumnIndex_ 
 std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_text_file(const char* filepath, const ReadLayeredSparseFromMatrixMarketOptions& options) {
     return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>(
         [&]() -> auto {
-            return byteme::RawFileReader(filepath, [&]{
-                byteme::RawFileReaderOptions opt;
-                opt.buffer_size = options.buffer_size;
-                return opt;
-            }());
+            return std::make_unique<byteme::RawFileReader>(filepath, byteme::RawFileReaderOptions());
         },
         check_chunk_size<Index_, ColumnIndex_>(options.chunk_size),
+        options.buffer_size,
         options.num_threads
     );
 }
@@ -269,14 +263,15 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
 template<typename Value_ = double, typename Index_ = int, typename ColumnIndex_ = std::uint16_t>
 std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_some_file(const char* filepath, const ReadLayeredSparseFromMatrixMarketOptions& options) {
     return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>(
-        [&]() -> auto {
-            return byteme::SomeFileReader(filepath, [&]{
-                byteme::SomeFileReaderOptions opt;
-                opt.buffer_size = options.buffer_size;
-                return opt;
-            }());
+        [&]() -> std::unique_ptr<byteme::Reader> {
+            if (byteme::is_gzip(filepath)) {
+                return std::make_unique<byteme::GzipFileReader>(filepath, byteme::GzipFileReaderOptions());
+            } else {
+                return std::make_unique<byteme::RawFileReader>(filepath, byteme::RawFileReaderOptions());
+            }
         },
         check_chunk_size<Index_, ColumnIndex_>(options.chunk_size),
+        options.buffer_size,
         options.num_threads
     );
 }
@@ -299,13 +294,10 @@ template<typename Value_ = double, typename Index_ = int, typename ColumnIndex_ 
 std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix_market_gzip_file(const char* filepath, const ReadLayeredSparseFromMatrixMarketOptions& options) {
     return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>(
         [&]() -> auto {
-            return byteme::GzipFileReader(filepath, [&]{
-                byteme::GzipFileReaderOptions opt;
-                opt.buffer_size = options.buffer_size;
-                return opt;
-            }());
+            return std::make_unique<byteme::GzipFileReader>(filepath, byteme::GzipFileReaderOptions());
         },
         check_chunk_size<Index_, ColumnIndex_>(options.chunk_size),
+        options.buffer_size,
         options.num_threads
     );
 }
@@ -363,9 +355,10 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
 {
     return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>(
         [&]() -> auto {
-            return byteme::RawBufferReader(contents, length);
+            return std::make_unique<byteme::RawBufferReader>(contents, length);
         },
         check_chunk_size<Index_, ColumnIndex_>(options.chunk_size),
+        options.buffer_size,
         options.num_threads
     );
 }
@@ -411,14 +404,15 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
     const ReadLayeredSparseFromMatrixMarketOptions& options)
 {
     return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>(
-        [&]() -> auto {
-            return byteme::SomeBufferReader(contents, length, [&]{
-                byteme::SomeBufferReaderOptions opt;
-                opt.buffer_size = options.buffer_size;
-                return opt;
-            }());
+        [&]() -> std::unique_ptr<byteme::Reader> {
+            if (byteme::is_zlib_or_gzip(contents, length)) {
+                return std::make_unique<byteme::ZlibBufferReader>(contents, length, byteme::ZlibBufferReaderOptions());
+            } else {
+                return std::make_unique<byteme::RawBufferReader>(contents, length);
+            }
         },
         check_chunk_size<Index_, ColumnIndex_>(options.chunk_size),
+        options.buffer_size,
         options.num_threads
     );
 }
@@ -446,13 +440,10 @@ std::shared_ptr<tatami::Matrix<Value_, Index_> > read_layered_sparse_from_matrix
 {
     return read_layered_sparse_from_matrix_market<Value_, Index_, ColumnIndex_>(
         [&]() -> auto {
-            return byteme::ZlibBufferReader(contents, length, [&]{
-                byteme::ZlibBufferReaderOptions opt;
-                opt.buffer_size = options.buffer_size;
-                return opt;
-            }());
+            return std::make_unique<byteme::ZlibBufferReader>(contents, length, byteme::ZlibBufferReaderOptions());
         },
         check_chunk_size<Index_, ColumnIndex_>(options.chunk_size),
+        options.buffer_size,
         options.num_threads
     );
 }
