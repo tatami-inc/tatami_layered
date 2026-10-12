@@ -11,27 +11,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Get latest CMake
       uses: lukka/get-cmake@latest
 
-    - name: Install tatami
-      run: |
-        git clone https://github.com/tatami-inc/tatami dep-tatami --depth=1
-        cd dep-tatami
-        cmake -S . -B build -DTATAMI_TESTS=OFF
-        sudo cmake --install build
-
-    - name: Install eminem
-      run: |
-        git clone https://github.com/tatami-inc/eminem dep-eminem --depth=1
-        cd dep-eminem
-        cmake -S . -B build -DEMINEM_TESTS=OFF
-        sudo cmake --install build
-
     - name: Configure the build
-      run: cmake -S . -B build -DTATAMI_LAYERED_FETCH_EXTERN=OFF -DTATAMI_LAYERED_TESTS=OFF
+      run: cmake -S . -B build -DTATAMI_LAYERED_TESTS=OFF
 
     - name: Install the library
       run: sudo cmake --install build
